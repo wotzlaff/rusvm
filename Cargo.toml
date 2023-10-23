@@ -9,6 +9,4 @@ name = "smorust"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.20", features = ["extension-module"] }
-numpy = "0.20"
-lru = "0.12.0"
+ndarray = "0.15.0"

@@ -1,4 +1,4 @@
-use numpy::ndarray::ArrayView2;
+use ndarray::ArrayView2;
 
 pub struct GaussianKernel<'a> {
     gamma: f64,
