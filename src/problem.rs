@@ -1,27 +1,28 @@
 pub mod classification;
-use crate::{Kernel, State};
+use crate::kernel::Kernel;
+use crate::status::Status;
 pub use classification::Classification;
 
 pub trait Problem {
-    fn quad(&self, state: &State, i: usize) -> f64;
-    fn grad(&self, state: &State, i: usize) -> f64;
+    fn quad(&self, state: &Status, i: usize) -> f64;
+    fn grad(&self, state: &Status, i: usize) -> f64;
     fn size(&self) -> usize;
     fn lb(&self, i: usize) -> f64;
     fn ub(&self, i: usize) -> f64;
     fn sign(&self, i: usize) -> f64;
-    fn is_optimal(&self, state: &State, tol: f64) -> bool;
+    fn is_optimal(&self, state: &Status, tol: f64) -> bool;
 
     fn lambda(&self) -> f64;
     fn regularization(&self) -> f64;
 
-    fn is_shrunk(&self, state: &State, active_set: &Vec<usize>) -> bool {
+    fn is_shrunk(&self, state: &Status, active_set: &Vec<usize>) -> bool {
         active_set.len() < state.a.len()
     }
 
     fn shrink(
         &self,
         kernel: &mut impl Kernel,
-        state: &State,
+        state: &Status,
         active_set: &mut Vec<usize>,
         threshold: f64,
     ) {
@@ -39,7 +40,7 @@ pub trait Problem {
         kernel.restrict_active(&active_set, &new_active_set);
         *active_set = new_active_set;
     }
-    fn unshrink(&self, kernel: &mut impl Kernel, state: &mut State, active_set: &mut Vec<usize>) {
+    fn unshrink(&self, kernel: &mut impl Kernel, state: &mut Status, active_set: &mut Vec<usize>) {
         let lambda = self.lambda();
         let n = self.size();
         let new_active_set = (0..n).collect();

@@ -1,43 +1,11 @@
 use crate::kernel::Kernel;
 use crate::problem::Problem;
-use crate::state::State;
+use crate::status::{Status, StatusCode};
 use std::time::Instant;
-
-pub enum Status {
-    Optimal,
-    MaxSteps,
-    TimeLimit,
-}
-
-pub struct SMOResult {
-    pub a: Vec<f64>,
-    pub b: f64,
-    pub c: f64,
-    pub value: f64,
-    pub violation: f64,
-    pub steps: usize,
-    pub time: f64,
-    pub status: Status,
-}
-
-impl SMOResult {
-    fn from_state(state: &State) -> SMOResult {
-        SMOResult {
-            a: state.a.to_vec(),
-            b: state.b,
-            c: state.c,
-            value: state.value,
-            violation: state.violation,
-            steps: 0,
-            status: Status::MaxSteps,
-            time: f64::NAN,
-        }
-    }
-}
 
 fn find_mvp_signed(
     problem: &impl Problem,
-    state: &mut State,
+    state: &mut Status,
     active_set: &Vec<usize>,
     sign: f64,
 ) -> (f64, f64, usize, usize) {
@@ -62,7 +30,7 @@ fn find_mvp_signed(
     (g_max - g_min, g_max + g_min, idx_i, idx_j)
 }
 
-fn find_mvp(problem: &impl Problem, state: &mut State, active_set: &Vec<usize>) -> (usize, usize) {
+fn find_mvp(problem: &impl Problem, state: &mut Status, active_set: &Vec<usize>) -> (usize, usize) {
     let (dij, sij, idx_i, idx_j) = find_mvp_signed(problem, state, active_set, 0.0);
     state.b = -0.5 * sij;
     state.violation = dij;
@@ -79,7 +47,7 @@ fn find_ws2(
     kernel: &impl Kernel,
     idx_i0: usize,
     idx_j1: usize,
-    state: &State,
+    state: &Status,
     active_set: &Vec<usize>,
     sign: f64,
 ) -> (usize, usize) {
@@ -157,7 +125,7 @@ fn update(
     kernel: &impl Kernel,
     idx_i: usize,
     idx_j: usize,
-    state: &mut State,
+    state: &mut Status,
     active_set: &Vec<usize>,
 ) {
     let i = active_set[idx_i];
@@ -194,21 +162,13 @@ pub fn solve(
     shrinking_period: usize,
     shrinking_threshold: f64,
     time_limit: f64,
-) -> SMOResult {
+) -> Status {
     let start = Instant::now();
     let n = problem.size();
-    let mut state = State {
-        a: vec![0.0; n],
-        b: 0.0,
-        c: 0.0,
-        violation: f64::INFINITY,
-        value: 0.0,
-        ka: vec![0.0; n],
-        g: vec![0.0; n],
-    };
+    let mut state = Status::new(n);
     let mut active_set = (0..n).collect();
 
-    let mut status = Status::MaxSteps;
+    let mut status = Status::new(n);
     let mut step: usize = 0;
     let mut stop = false;
     loop {
@@ -217,7 +177,7 @@ pub fn solve(
         }
         let elapsed = start.elapsed().as_secs_f64();
         if time_limit > 0.0 && elapsed >= time_limit {
-            status = Status::TimeLimit;
+            status.code = StatusCode::TimeLimit;
             stop = true;
         }
         // TODO: callback
@@ -245,7 +205,7 @@ pub fn solve(
                 problem.unshrink(kernel, &mut state, &mut active_set);
                 continue;
             }
-            status = Status::Optimal;
+            status.code = StatusCode::Optimal;
             stop = true;
         }
 
@@ -261,9 +221,7 @@ pub fn solve(
         update(problem, kernel, idx_i, idx_j, &mut state, &active_set);
         step += 1;
     }
-    let mut result = SMOResult::from_state(&state);
-    result.steps = step;
-    result.status = status;
-    result.time = start.elapsed().as_secs_f64();
-    result
+    status.steps = step;
+    status.time = start.elapsed().as_secs_f64();
+    status
 }
