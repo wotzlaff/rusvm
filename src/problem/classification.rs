@@ -1,44 +1,48 @@
 use crate::state::State;
 
-pub struct Classification {
+pub struct Classification<'a> {
     pub smoothing: f64,
     pub lambda: f64,
     pub shift: f64,
-    y: Vec<f64>,
-    w: Vec<f64>,
+    y: &'a [f64],
+    w: Option<&'a [f64]>,
 }
 
-impl Classification {
-    pub fn new(y: Vec<f64>, lambda: f64) -> Classification {
+impl<'a> Classification<'a> {
+    pub fn new(y: &[f64], lambda: f64) -> Classification {
         Classification {
             smoothing: 0.0,
             lambda,
             shift: 1.0,
             y,
-            w: Vec::new(),
+            w: None,
         }
     }
 
     fn weight(&self, i: usize) -> f64 {
-        if self.w.len() == 0 {
-            1.0
-        } else {
-            self.w[i]
+        match self.w {
+            Some(w) => w[i],
+            None => 1.0,
         }
     }
 
-    pub fn set_smoothing(mut self, smoothing: f64) -> Classification {
+    pub fn set_smoothing(mut self, smoothing: f64) -> Classification<'a> {
         self.smoothing = smoothing;
         self
     }
 
-    pub fn set_shift(mut self, shift: f64) -> Classification {
+    pub fn set_shift(mut self, shift: f64) -> Classification<'a> {
         self.shift = shift;
+        self
+    }
+
+    pub fn set_weights(mut self, w: &'a [f64]) -> Classification<'a> {
+        self.w = Some(w);
         self
     }
 }
 
-impl super::Problem for Classification {
+impl<'a> super::Problem for Classification<'a> {
     fn quad(&self, _state: &State, i: usize) -> f64 {
         2.0 * self.smoothing * self.lambda / self.weight(i)
     }
