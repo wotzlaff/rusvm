@@ -21,7 +21,7 @@ pub trait Problem {
 
     fn shrink(
         &self,
-        kernel: &mut impl Kernel,
+        kernel: &mut dyn Kernel,
         state: &Status,
         active_set: &mut Vec<usize>,
         threshold: f64,
@@ -40,7 +40,7 @@ pub trait Problem {
         kernel.restrict_active(&active_set, &new_active_set);
         *active_set = new_active_set;
     }
-    fn unshrink(&self, kernel: &mut impl Kernel, state: &mut Status, active_set: &mut Vec<usize>) {
+    fn unshrink(&self, kernel: &mut dyn Kernel, state: &mut Status, active_set: &mut Vec<usize>) {
         let lambda = self.lambda();
         let n = self.size();
         let new_active_set = (0..n).collect();

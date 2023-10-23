@@ -44,7 +44,7 @@ fn descent(q: f64, p: f64, t_max: f64, lmbda: f64, regularization: f64) -> f64 {
 
 fn find_ws2(
     problem: &impl Problem,
-    kernel: &impl Kernel,
+    kernel: &mut dyn Kernel,
     idx_i0: usize,
     idx_j1: usize,
     state: &Status,
@@ -59,6 +59,8 @@ fn find_ws2(
     let mut max_d1 = 0.0;
     let mut idx_j0 = idx_j1;
     let mut idx_i1 = idx_i0;
+
+    let diags: Vec<f64> = active_set.iter().map(|&i| kernel.diag(i)).collect();
     kernel.use_rows([i0, j1].to_vec(), &active_set, &mut |kij: Vec<&[f64]>| {
         let ki0 = kij[0];
         let kj1 = kij[1];
@@ -72,7 +74,7 @@ fn find_ws2(
                 continue;
             }
             let gr = state.g[r];
-            let krr = kernel.diag(r);
+            let krr = diags[idx_r];
 
             let pi0r = gi0 - gr;
             let d_upr = problem.ub(r) - state.a[r];
@@ -122,7 +124,7 @@ fn find_ws2(
 
 fn update(
     problem: &impl Problem,
-    kernel: &impl Kernel,
+    kernel: &mut dyn Kernel,
     idx_i: usize,
     idx_j: usize,
     state: &mut Status,
@@ -154,7 +156,7 @@ fn update(
 
 pub fn solve(
     problem: &impl Problem,
-    kernel: &mut impl Kernel,
+    kernel: &mut dyn Kernel,
     tol: f64,
     max_steps: usize,
     verbose: usize,
