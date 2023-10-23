@@ -6,8 +6,8 @@ pub struct GaussianKernel<'a> {
     xsqr: Vec<f64>,
 }
 
-impl<'a> GaussianKernel<'a> {
-    pub fn new(gamma: f64, data: ArrayView2<'a, f64>) -> GaussianKernel<'a> {
+impl GaussianKernel<'_> {
+    pub fn new(gamma: f64, data: ArrayView2<f64>) -> GaussianKernel {
         let &[n, nft] = data.shape() else {
             panic!("x has bad shape");
         };
