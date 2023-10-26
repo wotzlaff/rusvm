@@ -1,3 +1,4 @@
+use crate::max::{dual_smooth_max_2, smooth_max_2};
 use crate::status::Status;
 
 pub struct Classification<'a> {
@@ -43,12 +44,12 @@ impl<'a> Classification<'a> {
 }
 
 impl<'a> super::Problem for Classification<'a> {
-    fn quad(&self, _state: &Status, i: usize) -> f64 {
+    fn quad(&self, _status: &Status, i: usize) -> f64 {
         2.0 * self.smoothing * self.lambda / self.weight(i)
     }
-    fn grad(&self, state: &Status, i: usize) -> f64 {
-        state.ka[i] - self.shift * self.y[i]
-            + self.smoothing * self.y[i] * (2.0 * self.y[i] * state.a[i] / self.weight(i) - 1.0)
+    fn grad(&self, status: &Status, i: usize) -> f64 {
+        status.ka[i] - self.shift * self.y[i]
+            + self.smoothing * self.y[i] * (2.0 * self.y[i] * status.a[i] / self.weight(i) - 1.0)
     }
     fn size(&self) -> usize {
         self.y.len()
@@ -75,8 +76,8 @@ impl<'a> super::Problem for Classification<'a> {
         }
     }
 
-    fn is_optimal(&self, state: &Status, tol: f64) -> bool {
-        self.lambda * state.violation < tol
+    fn is_optimal(&self, status: &Status, tol: f64) -> bool {
+        self.lambda * status.violation < tol
     }
 
     fn lambda(&self) -> f64 {
@@ -84,5 +85,24 @@ impl<'a> super::Problem for Classification<'a> {
     }
     fn regularization(&self) -> f64 {
         1e-12
+    }
+
+    fn objective(&self, status: &Status) -> (f64, f64) {
+        let mut reg = 0.0;
+        let mut loss_primal = 0.0;
+        let mut loss_dual = 0.0;
+        for i in 0..self.size() {
+            reg += status.ka[i] * status.a[i];
+            let dec = status.ka[i] + status.b + self.sign(i) * status.c;
+            let ya = self.y[i] * status.a[i];
+            loss_primal +=
+                self.weight(i) * smooth_max_2(self.shift - self.y[i] * dec, self.smoothing);
+            loss_dual += self.weight(i) * dual_smooth_max_2(ya / self.weight(i), self.smoothing)
+                - self.shift * ya;
+        }
+        let asum_term = 0.0;
+        let obj_primal = 0.5 * reg + loss_primal + asum_term;
+        let obj_dual = 0.5 * reg + loss_dual;
+        (obj_primal, obj_dual)
     }
 }
