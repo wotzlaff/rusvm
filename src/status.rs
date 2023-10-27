@@ -3,6 +3,7 @@ pub enum StatusCode {
     Optimal,
     MaxSteps,
     TimeLimit,
+    Callback,
 }
 
 pub struct Status {

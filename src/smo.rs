@@ -165,6 +165,7 @@ pub fn solve(
     shrinking_period: usize,
     shrinking_threshold: f64,
     time_limit: f64,
+    callback: Option<&dyn Fn(&Status) -> bool>,
 ) -> Status {
     let start = Instant::now();
     let n = problem.size();
@@ -174,16 +175,25 @@ pub fn solve(
     let mut step: usize = 0;
     let mut stop = false;
     loop {
+        status.steps = step;
+        let elapsed = start.elapsed().as_secs_f64();
+        status.time = elapsed;
         if step >= max_steps {
             status.code = StatusCode::MaxSteps;
             stop = true;
         }
-        let elapsed = start.elapsed().as_secs_f64();
         if time_limit > 0.0 && elapsed >= time_limit {
             status.code = StatusCode::TimeLimit;
             stop = true;
         }
-        // TODO: callback
+
+        if let Some(callback_fn) = callback {
+            stop = callback_fn(&status);
+            if stop {
+                status.code = StatusCode::Callback;
+            }
+        };
+
         if shrinking_period > 0 && step % shrinking_period == 0 {
             problem.shrink(kernel, &status, &mut active_set, shrinking_threshold);
         }
@@ -196,13 +206,14 @@ pub fn solve(
                 let (obj_primal, obj_dual) = problem.objective(&status);
                 let gap = obj_primal + obj_dual;
                 println!(
-                    "{:10} {:10.2} {:10.6} {:10.6} {:10.6} {:10.6} {:8} / {}",
+                    "{:10} {:10.2} {:10.6} {:10.6} {:10.6} {:10.6} {:10.6} {:8} / {}",
                     step,
                     elapsed,
                     status.violation,
                     gap,
                     obj_primal,
                     -obj_dual,
+                    status.value,
                     active_set.len(),
                     problem.size()
                 )
@@ -240,7 +251,5 @@ pub fn solve(
         update(problem, kernel, idx_i, idx_j, &mut status, &active_set);
         step += 1;
     }
-    status.steps = step;
-    status.time = start.elapsed().as_secs_f64();
     status
 }
