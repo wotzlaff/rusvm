@@ -1,70 +1,74 @@
 use crate::max::{dual_smooth_max_2, smooth_max_2};
 use crate::status::Status;
 
-pub struct Classification<'a> {
+pub struct Regression<'a> {
     y: &'a [f64],
     w: Option<&'a [f64]>,
     pub params: super::Params,
-    pub shift: f64,
+    pub epsilon: f64,
 }
 
-impl<'a> Classification<'a> {
-    pub fn new(y: &[f64], params: super::Params) -> Classification {
-        Classification {
+impl<'a> Regression<'a> {
+    pub fn new(y: &[f64], params: super::Params) -> Regression {
+        Regression {
             y,
             w: None,
             params,
-            shift: 1.0,
+            epsilon: 1e-6,
         }
     }
 
     fn weight(&self, i: usize) -> f64 {
         match self.w {
-            Some(w) => w[i],
+            Some(w) => w[i % w.len()],
             None => 1.0,
         }
+    }
+
+    pub fn with_epsilon(mut self, epsilon: f64) -> Self {
+        self.epsilon = epsilon;
+        self
     }
 
     pub fn with_weights(mut self, w: &'a [f64]) -> Self {
         self.w = Some(w);
         self
     }
-
-    pub fn with_shift(mut self, shift: f64) -> Self {
-        self.shift = shift;
-        self
-    }
 }
 
-impl<'a> super::Problem for Classification<'a> {
+impl<'a> super::Problem for Regression<'a> {
     fn quad(&self, _status: &Status, i: usize) -> f64 {
         2.0 * self.params.smoothing * self.params.lambda / self.weight(i)
     }
     fn grad(&self, status: &Status, i: usize) -> f64 {
-        status.ka[i] - self.shift * self.y[i]
-            + self.params.smoothing
-                * self.y[i]
-                * (2.0 * self.y[i] * status.a[i] / self.weight(i) - 1.0)
+        let yi = self.y[i % self.y.len()];
+        status.ka[i] - yi
+            + self.sign(i)
+                * (self.epsilon
+                    + self.params.smoothing
+                        * (2.0 * self.sign(i) * status.a[i] / self.weight(i) - 1.0))
     }
     fn size(&self) -> usize {
-        self.y.len()
+        2 * self.y.len()
     }
     fn lb(&self, i: usize) -> f64 {
-        if self.y[i] > 0.0 {
+        let n = self.y.len();
+        if i < n {
             0.0
         } else {
-            -self.weight(i)
+            -self.weight(i - n)
         }
     }
     fn ub(&self, i: usize) -> f64 {
-        if self.y[i] > 0.0 {
+        let n = self.y.len();
+        if i < n {
             self.weight(i)
         } else {
             0.0
         }
     }
     fn sign(&self, i: usize) -> f64 {
-        if self.y[i] > 0.0 {
+        if i < self.y.len() {
             1.0
         } else {
             -1.0
@@ -88,13 +92,17 @@ impl<'a> super::Problem for Classification<'a> {
         let mut loss_dual = 0.0;
         for i in 0..self.size() {
             reg += status.ka[i] * status.a[i];
-            let dec = status.ka[i] + status.b + self.sign(i) * status.c;
-            let ya = self.y[i] * status.a[i];
-            loss_primal +=
-                self.weight(i) * smooth_max_2(self.shift - self.y[i] * dec, self.params.smoothing);
+            let yi = self.y[i % self.y.len()];
+            let wi = self.weight(i);
+            let si = self.sign(i);
+            let dec = status.ka[i] + status.b - si * status.c;
+            let ya = yi * status.a[i];
+            loss_primal += self.weight(i)
+                * smooth_max_2(si * (dec - yi) - self.epsilon, self.params.smoothing);
             loss_dual += self.weight(i)
-                * dual_smooth_max_2(ya / self.weight(i), self.params.smoothing)
-                - self.shift * ya;
+                * dual_smooth_max_2(status.a[i] / wi * si, self.params.smoothing)
+                - ya
+                + self.epsilon * si * status.a[i];
         }
         let asum_term = if self.params.max_asum < f64::INFINITY {
             self.params.max_asum * status.c

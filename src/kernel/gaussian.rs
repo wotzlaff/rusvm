@@ -25,11 +25,11 @@ impl GaussianKernel<'_> {
 
 impl super::Kernel for GaussianKernel<'_> {
     fn compute_row(&self, i: usize, ki: &mut [f64], active_set: &Vec<usize>) {
-        let xsqri = self.xsqr[i];
-        let xi = self.data.row(i);
+        let xsqri = self.xsqr[i % self.xsqr.len()];
+        let xi = self.data.row(i % self.xsqr.len());
         for (idx_j, &j) in active_set.iter().enumerate() {
-            let xj = self.data.row(j);
-            let dij = xsqri + self.xsqr[j] - 2.0 * xi.dot(&xj);
+            let xj = self.data.row(j % self.xsqr.len());
+            let dij = xsqri + self.xsqr[j % self.xsqr.len()] - 2.0 * xi.dot(&xj);
             (*ki)[idx_j] = (-self.gamma * dij).exp();
         }
     }

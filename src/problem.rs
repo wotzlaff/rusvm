@@ -1,8 +1,40 @@
 pub mod classification;
+pub mod regression;
 use crate::kernel::Kernel;
 use crate::status::Status;
 pub use classification::Classification;
+pub use regression::Regression;
 
+pub struct Params {
+    pub smoothing: f64,
+    pub lambda: f64,
+    pub max_asum: f64,
+}
+
+impl Params {
+    pub fn new() -> Self {
+        Params {
+            smoothing: 0.0,
+            lambda: 1.0,
+            max_asum: f64::INFINITY,
+        }
+    }
+
+    pub fn with_lambda(mut self, lambda: f64) -> Self {
+        self.lambda = lambda;
+        self
+    }
+
+    pub fn with_smoothing(mut self, smoothing: f64) -> Self {
+        self.smoothing = smoothing;
+        self
+    }
+
+    pub fn with_max_asum(mut self, max_asum: f64) -> Self {
+        self.max_asum = max_asum;
+        self
+    }
+}
 pub trait Problem {
     fn quad(&self, status: &Status, i: usize) -> f64;
     fn grad(&self, status: &Status, i: usize) -> f64;

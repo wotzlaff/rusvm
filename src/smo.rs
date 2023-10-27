@@ -4,7 +4,7 @@ use crate::status::{Status, StatusCode};
 use std::time::Instant;
 
 fn find_mvp_signed(
-    problem: &impl Problem,
+    problem: &dyn Problem,
     status: &mut Status,
     active_set: &Vec<usize>,
     sign: f64,
@@ -30,11 +30,7 @@ fn find_mvp_signed(
     (g_max - g_min, g_max + g_min, idx_i, idx_j)
 }
 
-fn find_mvp(
-    problem: &impl Problem,
-    status: &mut Status,
-    active_set: &Vec<usize>,
-) -> (usize, usize) {
+fn find_mvp(problem: &dyn Problem, status: &mut Status, active_set: &Vec<usize>) -> (usize, usize) {
     let (dij, sij, idx_i, idx_j) = find_mvp_signed(problem, status, active_set, 0.0);
     status.b = -0.5 * sij;
     status.violation = dij;
@@ -47,7 +43,7 @@ fn descent(q: f64, p: f64, t_max: f64, lmbda: f64, regularization: f64) -> f64 {
 }
 
 fn find_ws2(
-    problem: &impl Problem,
+    problem: &dyn Problem,
     kernel: &mut dyn Kernel,
     idx_i0: usize,
     idx_j1: usize,
@@ -127,7 +123,7 @@ fn find_ws2(
 }
 
 fn update(
-    problem: &impl Problem,
+    problem: &dyn Problem,
     kernel: &mut dyn Kernel,
     idx_i: usize,
     idx_j: usize,
@@ -159,7 +155,7 @@ fn update(
 }
 
 pub fn solve(
-    problem: &impl Problem,
+    problem: &dyn Problem,
     kernel: &mut dyn Kernel,
     tol: f64,
     max_steps: usize,
