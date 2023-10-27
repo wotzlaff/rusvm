@@ -175,6 +175,7 @@ pub fn solve(
     let mut stop = false;
     loop {
         if step >= max_steps {
+            status.code = StatusCode::MaxSteps;
             stop = true;
         }
         let elapsed = start.elapsed().as_secs_f64();
