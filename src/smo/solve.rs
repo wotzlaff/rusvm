@@ -2,7 +2,6 @@ use crate::kernel::Kernel;
 use crate::problem::Problem;
 use std::time::Instant;
 
-// pub mod status;
 use super::status::{Status, StatusCode};
 use super::update::update;
 use super::ws::*;
@@ -10,14 +9,7 @@ use super::ws::*;
 pub fn solve(
     problem: &dyn Problem,
     kernel: &mut dyn Kernel,
-    tol: f64,
-    max_steps: usize,
-    verbose: usize,
-    log_objective: bool,
-    second_order: bool,
-    shrinking_period: usize,
-    shrinking_threshold: f64,
-    time_limit: f64,
+    params: &super::Params,
     callback: Option<&dyn Fn(&Status) -> bool>,
 ) -> Status {
     let start = Instant::now();
@@ -31,11 +23,11 @@ pub fn solve(
         status.steps = step;
         let elapsed = start.elapsed().as_secs_f64();
         status.time = elapsed;
-        if step >= max_steps {
+        if step >= params.max_steps {
             status.code = StatusCode::MaxSteps;
             stop = true;
         }
-        if time_limit > 0.0 && elapsed >= time_limit {
+        if params.time_limit > 0.0 && elapsed >= params.time_limit {
             status.code = StatusCode::TimeLimit;
             stop = true;
         }
@@ -47,15 +39,15 @@ pub fn solve(
             }
         };
 
-        if shrinking_period > 0 && step % shrinking_period == 0 {
-            problem.shrink(kernel, &status, &mut active_set, shrinking_threshold);
+        if params.shrinking_period > 0 && step % params.shrinking_period == 0 {
+            problem.shrink(kernel, &status, &mut active_set, params.shrinking_threshold);
         }
 
         let (idx_i0, idx_j1) = find_mvp(problem, &mut status, &active_set);
-        let optimal = problem.is_optimal(&status, tol);
+        let optimal = problem.is_optimal(&status, params.tol);
 
-        if verbose > 0 && (step % verbose == 0 || optimal) {
-            if log_objective {
+        if params.verbose > 0 && (step % params.verbose == 0 || optimal) {
+            if params.log_objective {
                 let (obj_primal, obj_dual) = problem.objective(&status);
                 let gap = obj_primal + obj_dual;
                 println!(
@@ -98,7 +90,7 @@ pub fn solve(
             break;
         }
 
-        let (idx_i, idx_j) = if second_order {
+        let (idx_i, idx_j) = if params.second_order {
             let sign = if problem.has_max_asum() && status.asum == problem.max_asum() {
                 problem.sign(active_set[idx_i0])
             } else {
