@@ -1,4 +1,4 @@
-use crate::max::{dual_smooth_max_2, smooth_max_2};
+use crate::max::poly2;
 use crate::status::Status;
 
 pub struct Classification<'a> {
@@ -88,9 +88,9 @@ impl<'a> super::Problem for Classification<'a> {
             let dec = status.ka[i] + status.b + self.sign(i) * status.c;
             let ya = self.y[i] * status.a[i];
             loss_primal +=
-                self.weight(i) * smooth_max_2(self.shift - self.y[i] * dec, self.params.smoothing);
+                self.weight(i) * poly2::max(self.shift - self.y[i] * dec, self.params.smoothing);
             loss_dual += self.weight(i)
-                * dual_smooth_max_2(ya / self.weight(i), self.params.smoothing)
+                * poly2::dual_max(ya / self.weight(i), self.params.smoothing)
                 - self.shift * ya;
         }
         let asum_term = if self.params.max_asum < f64::INFINITY {

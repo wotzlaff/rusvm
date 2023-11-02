@@ -1,4 +1,4 @@
-use crate::max::{dual_smooth_max_2, smooth_max_2};
+use crate::max::poly2;
 use crate::status::Status;
 
 pub struct Regression<'a> {
@@ -94,12 +94,11 @@ impl<'a> super::Problem for Regression<'a> {
             let si = self.sign(i);
             let dec = status.ka[i] + status.b - si * status.c;
             let ya = yi * status.a[i];
-            loss_primal += self.weight(i)
-                * smooth_max_2(si * (dec - yi) - self.epsilon, self.params.smoothing);
-            loss_dual += self.weight(i)
-                * dual_smooth_max_2(status.a[i] / wi * si, self.params.smoothing)
-                - ya
-                + self.epsilon * si * status.a[i];
+            loss_primal +=
+                self.weight(i) * poly2::max(si * (dec - yi) - self.epsilon, self.params.smoothing);
+            loss_dual +=
+                self.weight(i) * poly2::dual_max(status.a[i] / wi * si, self.params.smoothing) - ya
+                    + self.epsilon * si * status.a[i];
         }
         let asum_term = if self.params.max_asum < f64::INFINITY {
             self.params.max_asum * status.c
