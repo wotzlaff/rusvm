@@ -31,8 +31,22 @@ fn find_mvp_signed(
 }
 
 fn find_mvp(problem: &dyn Problem, status: &mut Status, active_set: &Vec<usize>) -> (usize, usize) {
-    let (dij, sij, idx_i, idx_j) = find_mvp_signed(problem, status, active_set, 0.0);
-    status.b = -0.5 * sij;
+    let (dij, idx_i, idx_j) = if status.asum == problem.max_asum() {
+        let (dij_p, sij_p, idx_i_p, idx_j_p) = find_mvp_signed(problem, status, active_set, 1.0);
+        let (dij_n, sij_n, idx_i_n, idx_j_n) = find_mvp_signed(problem, status, active_set, -1.0);
+        status.b = -0.25 * (sij_p + sij_n);
+        status.c = 0.25 * (sij_n - sij_p);
+        if dij_p >= dij_n {
+            (dij_p, idx_i_p, idx_j_p)
+        } else {
+            (dij_n, idx_i_n, idx_j_n)
+        }
+    } else {
+        let (dij, sij, idx_i, idx_j) = find_mvp_signed(problem, status, active_set, 0.0);
+        status.b = -0.5 * sij;
+        status.violation = dij;
+        (dij, idx_i, idx_j)
+    };
     status.violation = dij;
     (idx_i, idx_j)
 }
@@ -140,10 +154,19 @@ fn update(
             + problem.quad(status, i)
             + problem.quad(status, j);
         let max_tij = f64::min(status.a[i] - problem.lb(i), problem.ub(j) - status.a[j]);
-        let tij: f64 = f64::min(
+        let mut tij: f64 = f64::min(
             problem.lambda() * pij / f64::max(qij, problem.regularization()),
             max_tij,
         );
+        if problem.sign(i) != problem.sign(j) {
+            let rem_asum = problem.max_asum() - status.asum;
+            if problem.sign(i) < 0.0 && rem_asum <= 2.0 * max_tij {
+                tij = 0.5 * rem_asum;
+                status.asum = problem.max_asum();
+            } else {
+                status.asum -= 2.0 * tij * problem.sign(i);
+            }
+        }
         status.a[i] -= tij;
         status.a[j] += tij;
         let tij_l = tij / problem.lambda();
@@ -206,7 +229,7 @@ pub fn solve(
                 let (obj_primal, obj_dual) = problem.objective(&status);
                 let gap = obj_primal + obj_dual;
                 println!(
-                    "{:10} {:10.2} {:10.6} {:10.6} {:10.6} {:10.6} {:10.6} {:8} / {}",
+                    "{:10} {:10.2} {:10.6} {:10.6} {:10.6} {:10.6} {:10.6} {:8.3} {:8} / {}",
                     step,
                     elapsed,
                     status.violation,
@@ -214,16 +237,18 @@ pub fn solve(
                     obj_primal,
                     -obj_dual,
                     status.value,
+                    status.asum,
                     active_set.len(),
                     problem.size()
                 )
             } else {
                 println!(
-                    "{:10} {:10.2} {:10.6} {:10.6} {:8} / {}",
+                    "{:10} {:10.2} {:10.6} {:10.6} {:8.3} {:8} / {}",
                     step,
                     elapsed,
                     status.violation,
                     status.value,
+                    status.asum,
                     active_set.len(),
                     problem.size()
                 )
@@ -244,7 +269,12 @@ pub fn solve(
         }
 
         let (idx_i, idx_j) = if second_order {
-            find_ws2(problem, kernel, idx_i0, idx_j1, &status, &active_set, 0.0)
+            let sign = if problem.has_max_asum() && status.asum == problem.max_asum() {
+                problem.sign(active_set[idx_i0])
+            } else {
+                0.0
+            };
+            find_ws2(problem, kernel, idx_i0, idx_j1, &status, &active_set, sign)
         } else {
             (idx_i0, idx_j1)
         };

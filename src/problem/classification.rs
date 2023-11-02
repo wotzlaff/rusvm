@@ -75,11 +75,8 @@ impl<'a> super::Problem for Classification<'a> {
         self.params.lambda * status.violation < tol
     }
 
-    fn lambda(&self) -> f64 {
-        self.params.lambda
-    }
-    fn regularization(&self) -> f64 {
-        1e-12
+    fn params(&self) -> &super::Params {
+        &self.params
     }
 
     fn objective(&self, status: &Status) -> (f64, f64) {
