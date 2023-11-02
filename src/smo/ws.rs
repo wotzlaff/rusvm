@@ -1,6 +1,6 @@
-use super::status::Status;
 use crate::kernel::Kernel;
 use crate::problem::Problem;
+use crate::status::Status;
 
 fn find_mvp_signed(
     problem: &dyn Problem,

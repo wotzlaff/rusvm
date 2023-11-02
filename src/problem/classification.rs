@@ -1,5 +1,5 @@
 use crate::max::{dual_smooth_max_2, smooth_max_2};
-use crate::smo::status::Status;
+use crate::status::Status;
 
 pub struct Classification<'a> {
     y: &'a [f64],

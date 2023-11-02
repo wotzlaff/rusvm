@@ -7,7 +7,7 @@ pub mod regression;
 pub use regression::Regression;
 
 use crate::kernel::Kernel;
-use crate::smo::status::Status;
+use crate::status::Status;
 
 pub trait Problem {
     fn quad(&self, status: &Status, i: usize) -> f64;

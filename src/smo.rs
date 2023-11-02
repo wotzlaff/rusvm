@@ -6,5 +6,3 @@ pub use self::params::Params;
 
 mod solve;
 pub use solve::solve;
-
-pub mod status;

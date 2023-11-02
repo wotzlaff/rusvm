@@ -3,5 +3,5 @@ pub mod max;
 pub mod problem;
 pub mod smo;
 
-pub use crate::smo::solve;
-pub use crate::smo::status::{Status, StatusCode};
+pub mod status;
+pub use crate::status::{Status, StatusCode};

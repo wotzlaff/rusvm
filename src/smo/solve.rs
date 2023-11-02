@@ -1,8 +1,8 @@
 use crate::kernel::Kernel;
 use crate::problem::Problem;
+use crate::status::{Status, StatusCode};
 use std::time::Instant;
 
-use super::status::{Status, StatusCode};
 use super::update::update;
 use super::ws::*;
 

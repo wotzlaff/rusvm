@@ -14,7 +14,7 @@ impl<K> CachedKernel<'_, K>
 where
     K: Kernel,
 {
-    pub fn from(base: &mut K, capacity: usize) -> CachedKernel<'_, K> {
+    pub fn from(base: &K, capacity: usize) -> CachedKernel<'_, K> {
         CachedKernel {
             cache: RawLRU::new(capacity).unwrap(),
             data: Vec::new(),
