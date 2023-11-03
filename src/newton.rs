@@ -1,3 +1,5 @@
+use ndarray::Array;
+
 use crate::kernel::Kernel;
 use crate::problem::Problem;
 use std::time::Instant;
@@ -35,7 +37,8 @@ pub fn solve(
     let mut stop = false;
 
     // status.dec = vec![0.0; n];
-    status.h = vec![0.0; n];
+    let mut h = vec![0.0; n];
+    let mut da = vec![0.0; n];
     loop {
         // update steps and time
         status.steps = step;
@@ -83,11 +86,53 @@ pub fn solve(
         }
 
         // compute decisions
+        let mut active_set = Vec::new();
+        let mut active_zeros = Vec::new();
+        let mut dasum_zeros = 0.0;
+        let mut violation = 0.0;
         for i in 0..problem.size() {
+            let ai = status.a[i];
             let ti = status.ka[i] + status.b + status.c * problem.sign(i);
-            status.g[i] = problem.d_loss(i, ti);
-            status.h[i] = problem.d2_loss(i, ti);
+            let gi = problem.d_loss(i, ti);
+            status.g[i] = gi;
+            violation += f64::abs(ai + gi);
+            let hi = problem.d2_loss(i, ti);
+            h[i] = hi;
+            if h[i] == 0.0 {
+                let dai = ai + status.g[i];
+                da[i] = dai;
+                if dai != 0.0 {
+                    active_zeros.push(i);
+                }
+                dasum_zeros += dai;
+            } else {
+                active_set.push(i);
+            }
         }
+
+        let n_active = active_set.len();
+        let mut mat = Array::zeros((n_active, n_active));
+        let mut rhs = Array::zeros((n_active,));
+
+        let mut rhs_i;
+        let mut ki = vec![0.0; n];
+        active_set.append(&mut active_zeros);
+        for (idx_i, &i) in active_set[..n_active].iter().enumerate() {
+            kernel.compute_row(i, &mut ki, &active_set);
+            for (idx_j, &j) in active_set[..n_active].iter().enumerate() {
+                mat[(idx_i, idx_j)] = ki[idx_j] / problem.lambda();
+                if idx_i == idx_j {
+                    mat[(idx_i, idx_j)] += 1.0 / h[i];
+                }
+            }
+            rhs_i = (status.a[i] + status.g[i]) / h[i];
+            for (idx_j, &j) in active_set[n_active..].iter().enumerate() {
+                rhs_i -= da[j] * ki[idx_j] / problem.lambda();
+            }
+            rhs[idx_i] = rhs_i;
+        }
+
+        status.violation = violation;
 
         step += 1;
     }
