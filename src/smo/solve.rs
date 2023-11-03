@@ -30,7 +30,6 @@ pub fn solve_with_status(
     let n = problem.size();
     let mut active_set = (0..n).collect();
 
-    let mut status = Status::new(n);
     let mut step: usize = 0;
     let mut stop = false;
 

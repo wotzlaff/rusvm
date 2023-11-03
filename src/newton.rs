@@ -1,4 +1,5 @@
-use ndarray::Array;
+use ndarray::prelude::*;
+use ndarray_linalg::{FactorizeInto, Solve};
 
 use crate::kernel::Kernel;
 use crate::problem::Problem;
@@ -44,7 +45,6 @@ pub fn solve_with_status(
     let mut status = status;
     let start = Instant::now();
     let n = problem.size();
-    let mut status = Status::new(n);
     let mut step: usize = 0;
     let mut stop = false;
 
@@ -102,16 +102,18 @@ pub fn solve_with_status(
         let mut active_zeros = Vec::new();
         let mut dasum_zeros = 0.0;
         let mut violation = 0.0;
+        let mut asum = 0.0;
         for i in 0..problem.size() {
             let ai = status.a[i];
+            asum += ai;
             let ti = status.ka[i] + status.b + status.c * problem.sign(i);
             let gi = problem.d_loss(i, ti);
             status.g[i] = gi;
-            violation += f64::abs(ai + gi);
+            violation += (ai + gi).abs();
             let hi = problem.d2_loss(i, ti);
             h[i] = hi;
             if h[i] == 0.0 {
-                let dai = ai + status.g[i];
+                let dai = ai + gi;
                 da[i] = dai;
                 if dai != 0.0 {
                     active_zeros.push(i);
@@ -121,17 +123,21 @@ pub fn solve_with_status(
                 active_set.push(i);
             }
         }
+        status.violation = violation + asum.abs();
+        status.asum = asum;
 
         let n_active = active_set.len();
         let mut mat = Array::zeros((n_active, n_active));
         let mut rhs = Array::zeros((n_active,));
 
+        // compute Newton direction
         let mut rhs_i;
+        // TODO: think about the size of ki
         let mut ki = vec![0.0; n];
         active_set.append(&mut active_zeros);
         for (idx_i, &i) in active_set[..n_active].iter().enumerate() {
             kernel.compute_row(i, &mut ki, &active_set);
-            for (idx_j, &j) in active_set[..n_active].iter().enumerate() {
+            for idx_j in 0..n_active {
                 mat[(idx_i, idx_j)] = ki[idx_j] / problem.lambda();
                 if idx_i == idx_j {
                     mat[(idx_i, idx_j)] += 1.0 / h[i];
@@ -139,13 +145,44 @@ pub fn solve_with_status(
             }
             rhs_i = (status.a[i] + status.g[i]) / h[i];
             for (idx_j, &j) in active_set[n_active..].iter().enumerate() {
-                rhs_i -= da[j] * ki[idx_j] / problem.lambda();
+                rhs_i -= da[j] * ki[n_active + idx_j] / problem.lambda();
             }
-            rhs[idx_i] = rhs_i;
+            rhs[idx_i] = rhs_i / h[i];
+        }
+        let mat_fact = mat.factorize_into().unwrap();
+        let mat_inv_rhs = mat_fact.solve_into(rhs).unwrap();
+        let mat_inv_one = mat_fact.solve_into(Array::ones((n_active,))).unwrap();
+
+        let rhs_b = asum - dasum_zeros;
+        let db = (mat_inv_rhs.sum() - rhs_b) / mat_inv_one.sum();
+        let da_nonzero = mat_inv_rhs - db * mat_inv_one;
+        for (idx_i, &i) in active_set[..n_active].iter().enumerate() {
+            da[i] = da_nonzero[idx_i];
         }
 
-        status.violation = violation;
+        let mut stepsize = 1.0;
 
+        let (obj0, _obj_dual) = problem.objective(&status);
+        println!("objective {obj0}");
+        let mut status_next = status.clone();
+        for _backstep in 0..10 {
+            status_next.b -= stepsize * db;
+            // TODO: think about the use of vector da
+            for &i in active_set.iter() {
+                status_next.a[i] -= stepsize * da[i];
+                kernel.compute_row(i, &mut ki, &(0..n).collect());
+                for (j, &kij) in ki.iter().enumerate() {
+                    status_next.ka[j] -= kij * stepsize * da[i];
+                }
+            }
+            let (obj1, _obj_dual) = problem.objective(&status);
+            if obj1 < obj0 {
+                break;
+            }
+            stepsize *= 0.5;
+            status_next = status.clone();
+        }
+        status = status_next;
         step += 1;
     }
     status
