@@ -30,6 +30,18 @@ pub fn solve(
     params: &Params,
     callback: Option<&dyn Fn(&Status) -> bool>,
 ) -> Status {
+    let n = problem.size();
+    let status = Status::new(n);
+    solve_with_status(status, problem, kernel, params, callback)
+}
+pub fn solve_with_status(
+    status: Status,
+    problem: &dyn Problem,
+    kernel: &mut dyn Kernel,
+    params: &Params,
+    callback: Option<&dyn Fn(&Status) -> bool>,
+) -> Status {
+    let mut status = status;
     let start = Instant::now();
     let n = problem.size();
     let mut status = Status::new(n);
