@@ -37,12 +37,6 @@ impl<'a> Classification<'a> {
 }
 
 impl<'a> super::Problem for Classification<'a> {
-    fn grad(&self, status: &Status, i: usize) -> f64 {
-        status.ka[i] - self.shift * self.y[i]
-            + self.params.smoothing
-                * self.y[i]
-                * (2.0 * self.y[i] * status.a[i] / self.weight(i) - 1.0)
-    }
     fn size(&self) -> usize {
         self.y.len()
     }
