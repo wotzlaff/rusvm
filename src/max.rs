@@ -29,4 +29,10 @@ pub mod poly2 {
     pub fn dual_max(a: f64, s: f64) -> f64 {
         s * a * (a - 1.0)
     }
+    pub fn d_dual_max(a: f64, s: f64) -> f64 {
+        s * (2.0 * a - 1.0)
+    }
+    pub fn d2_dual_max(_a: f64, s: f64) -> f64 {
+        2.0 * s
+    }
 }

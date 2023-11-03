@@ -1,5 +1,5 @@
-use crate::kernel::Kernel;
 use crate::problem::Problem;
+use crate::{kernel::Kernel, max::poly2};
 use std::time::Instant;
 
 use super::status::{Status, StatusCode};
@@ -33,19 +33,28 @@ pub fn solve(
     let mut status = Status::new(n);
     let mut step: usize = 0;
     let mut stop = false;
+
+    // status.dec = vec![0.0; n];
+    status.h = vec![0.0; n];
     loop {
+        // update steps and time
         status.steps = step;
         let elapsed = start.elapsed().as_secs_f64();
         status.time = elapsed;
+
+        // handle step limit
         if step >= params.max_steps {
             status.code = StatusCode::MaxSteps;
             stop = true;
         }
+
+        // handle time limit
         if params.time_limit > 0.0 && elapsed >= params.time_limit {
             status.code = StatusCode::TimeLimit;
             stop = true;
         }
 
+        // handle callback
         if let Some(callback_fn) = callback {
             stop = callback_fn(&status);
             if stop {
@@ -53,8 +62,14 @@ pub fn solve(
             }
         };
 
+        // check for optimality
         let optimal = problem.is_optimal(&status, params.tol);
+        if optimal {
+            status.code = StatusCode::Optimal;
+            stop = true;
+        }
 
+        // handle progress output
         if params.verbose > 0 && (step % params.verbose == 0 || optimal) {
             println!(
                 "{:10} {:10.2} {:10.6} {:10.6} {:8.3}",
@@ -62,16 +77,18 @@ pub fn solve(
             )
         }
 
-        if optimal {
-            status.code = StatusCode::Optimal;
-            stop = true;
-        }
-
+        // terminate
         if stop {
             break;
         }
 
-        // TODO: implement something
+        // compute decisions
+        for k in 0..problem.size() {
+            // status.dec[k] =
+            let tk = status.ka[k] + status.b + status.c * problem.sign(k);
+            status.g[k] = poly2::d_max(tk, problem.smoothing());
+            status.h[k] = poly2::d2_max(tk, problem.smoothing());
+        }
 
         step += 1;
     }

@@ -19,19 +19,26 @@ pub fn solve(
     let mut status = Status::new(n);
     let mut step: usize = 0;
     let mut stop = false;
+
     loop {
+        // update steps and time
         status.steps = step;
         let elapsed = start.elapsed().as_secs_f64();
         status.time = elapsed;
+
+        // handle step limit
         if step >= params.max_steps {
             status.code = StatusCode::MaxSteps;
             stop = true;
         }
+
+        // handle time limit
         if params.time_limit > 0.0 && elapsed >= params.time_limit {
             status.code = StatusCode::TimeLimit;
             stop = true;
         }
 
+        // handle callback
         if let Some(callback_fn) = callback {
             stop = callback_fn(&status);
             if stop {
@@ -39,13 +46,20 @@ pub fn solve(
             }
         };
 
+        // handle shrinking
         if params.shrinking_period > 0 && step % params.shrinking_period == 0 {
             problem.shrink(kernel, &status, &mut active_set, params.shrinking_threshold);
         }
 
+        // check for optimality
         let (idx_i0, idx_j1) = find_mvp(problem, &mut status, &active_set);
         let optimal = problem.is_optimal(&status, params.tol);
+        if optimal {
+            status.code = StatusCode::Optimal;
+            stop = true;
+        }
 
+        // handle progress output
         if params.verbose > 0 && (step % params.verbose == 0 || optimal) {
             if params.log_objective {
                 let (obj_primal, obj_dual) = problem.objective(&status);
@@ -77,19 +91,20 @@ pub fn solve(
             }
         }
 
+        // unshrink if necessary
         if optimal {
             if problem.is_shrunk(&status, &active_set) {
                 problem.unshrink(kernel, &mut status, &mut active_set);
                 continue;
             }
-            status.code = StatusCode::Optimal;
-            stop = true;
         }
 
+        // terminate
         if stop {
             break;
         }
 
+        // determine working set
         let (idx_i, idx_j) = if params.second_order {
             let sign = if problem.has_max_asum() && status.asum == problem.max_asum() {
                 problem.sign(active_set[idx_i0])
@@ -100,6 +115,8 @@ pub fn solve(
         } else {
             (idx_i0, idx_j1)
         };
+
+        // update selected variables
         update(problem, kernel, idx_i, idx_j, &mut status, &active_set);
         step += 1;
     }

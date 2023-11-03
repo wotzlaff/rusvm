@@ -10,8 +10,13 @@ use crate::kernel::Kernel;
 use crate::status::Status;
 
 pub trait Problem {
-    fn quad(&self, status: &Status, i: usize) -> f64;
-    fn grad(&self, status: &Status, i: usize) -> f64;
+    fn grad(&self, status: &Status, i: usize) -> f64 {
+        status.ka[i] + self.d_dual_loss(i, status.a[i])
+    }
+    fn quad(&self, status: &Status, i: usize) -> f64 {
+        // TODO: get rid of lambda here!
+        self.lambda() * self.d2_dual_loss(i, status.a[i])
+    }
     fn size(&self) -> usize;
     fn lb(&self, i: usize) -> f64;
     fn ub(&self, i: usize) -> f64;
@@ -40,7 +45,38 @@ pub trait Problem {
         f64::is_finite(self.max_asum())
     }
 
-    fn objective(&self, status: &Status) -> (f64, f64);
+    fn objective(&self, status: &Status) -> (f64, f64) {
+        let mut reg = 0.0;
+        let mut loss_primal = 0.0;
+        let mut loss_dual = 0.0;
+
+        for i in 0..self.size() {
+            // compute regularization
+            reg += status.ka[i] * status.a[i];
+            // compute primal loss
+            let ti = status.ka[i] + status.b + self.sign(i) * status.c;
+            loss_primal += self.loss(i, ti);
+            // compute dual loss
+            loss_dual += self.dual_loss(i, status.a[i]);
+        }
+
+        let asum_term = if self.max_asum() < f64::INFINITY {
+            self.max_asum() * status.c
+        } else {
+            0.0
+        };
+
+        let obj_primal = 0.5 * reg + loss_primal + asum_term;
+        let obj_dual = 0.5 * reg + loss_dual;
+        (obj_primal, obj_dual)
+    }
+
+    fn dual_loss(&self, i: usize, ai: f64) -> f64;
+    fn d_dual_loss(&self, i: usize, ai: f64) -> f64;
+    fn d2_dual_loss(&self, i: usize, ai: f64) -> f64;
+    fn loss(&self, i: usize, ti: f64) -> f64;
+    fn d_loss(&self, i: usize, ti: f64) -> f64;
+    fn d2_loss(&self, i: usize, ti: f64) -> f64;
 
     fn shrink(
         &self,

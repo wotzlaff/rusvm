@@ -37,17 +37,6 @@ impl<'a> Regression<'a> {
 }
 
 impl<'a> super::Problem for Regression<'a> {
-    fn quad(&self, _status: &Status, i: usize) -> f64 {
-        2.0 * self.params.smoothing * self.params.lambda / self.weight(i)
-    }
-    fn grad(&self, status: &Status, i: usize) -> f64 {
-        let yi = self.y[i % self.y.len()];
-        status.ka[i] - yi
-            + self.sign(i)
-                * (self.epsilon
-                    + self.params.smoothing
-                        * (2.0 * self.sign(i) * status.a[i] / self.weight(i) - 1.0))
-    }
     fn size(&self) -> usize {
         2 * self.y.len()
     }
@@ -83,30 +72,36 @@ impl<'a> super::Problem for Regression<'a> {
         &self.params
     }
 
-    fn objective(&self, status: &Status) -> (f64, f64) {
-        let mut reg = 0.0;
-        let mut loss_primal = 0.0;
-        let mut loss_dual = 0.0;
-        for i in 0..self.size() {
-            reg += status.ka[i] * status.a[i];
-            let yi = self.y[i % self.y.len()];
-            let wi = self.weight(i);
-            let si = self.sign(i);
-            let dec = status.ka[i] + status.b - si * status.c;
-            let ya = yi * status.a[i];
-            loss_primal +=
-                self.weight(i) * poly2::max(si * (dec - yi) - self.epsilon, self.params.smoothing);
-            loss_dual +=
-                self.weight(i) * poly2::dual_max(status.a[i] / wi * si, self.params.smoothing) - ya
-                    + self.epsilon * si * status.a[i];
-        }
-        let asum_term = if self.params.max_asum < f64::INFINITY {
-            self.params.max_asum * status.c
-        } else {
-            0.0
-        };
-        let obj_primal = 0.5 * reg + loss_primal + asum_term;
-        let obj_dual = 0.5 * reg + loss_dual;
-        (obj_primal, obj_dual)
+    fn dual_loss(&self, i: usize, ai: f64) -> f64 {
+        let si = self.sign(i);
+        let yi = self.y[i % self.y.len()];
+        let wi = self.weight(i);
+        wi * poly2::dual_max(ai / wi * si, self.params.smoothing) - yi * ai + self.epsilon * si * ai
+    }
+    fn d_dual_loss(&self, i: usize, ai: f64) -> f64 {
+        let si = self.sign(i);
+        let yi = self.y[i % self.y.len()];
+        let wi: f64 = self.weight(i);
+        si * poly2::d_dual_max(ai / wi * si, self.params.smoothing) - yi + self.epsilon * si
+    }
+    fn d2_dual_loss(&self, i: usize, ai: f64) -> f64 {
+        let si = self.sign(i);
+        let wi: f64 = self.weight(i);
+        poly2::d2_dual_max(ai / wi * si, self.params.smoothing) / wi
+    }
+    fn loss(&self, i: usize, ti: f64) -> f64 {
+        let yi = self.y[i % self.y.len()];
+        let si: f64 = self.sign(i);
+        self.weight(i) * poly2::max(si * (yi - ti) - self.epsilon, self.params.smoothing)
+    }
+    fn d_loss(&self, i: usize, ti: f64) -> f64 {
+        let yi = self.y[i % self.y.len()];
+        let si = self.sign(i);
+        -si * self.weight(i) * poly2::d_max(si * (yi - ti) - self.epsilon, self.params.smoothing)
+    }
+    fn d2_loss(&self, i: usize, ti: f64) -> f64 {
+        let yi = self.y[i % self.y.len()];
+        let si = self.sign(i);
+        self.weight(i) * poly2::d2_max(si * (yi - ti) - self.epsilon, self.params.smoothing)
     }
 }

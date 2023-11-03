@@ -79,27 +79,30 @@ impl<'a> super::Problem for Classification<'a> {
         &self.params
     }
 
-    fn objective(&self, status: &Status) -> (f64, f64) {
-        let mut reg = 0.0;
-        let mut loss_primal = 0.0;
-        let mut loss_dual = 0.0;
-        for i in 0..self.size() {
-            reg += status.ka[i] * status.a[i];
-            let dec = status.ka[i] + status.b + self.sign(i) * status.c;
-            let ya = self.y[i] * status.a[i];
-            loss_primal +=
-                self.weight(i) * poly2::max(self.shift - self.y[i] * dec, self.params.smoothing);
-            loss_dual += self.weight(i)
-                * poly2::dual_max(ya / self.weight(i), self.params.smoothing)
-                - self.shift * ya;
-        }
-        let asum_term = if self.params.max_asum < f64::INFINITY {
-            self.params.max_asum * status.c
-        } else {
-            0.0
-        };
-        let obj_primal = 0.5 * reg + loss_primal + asum_term;
-        let obj_dual = 0.5 * reg + loss_dual;
-        (obj_primal, obj_dual)
+    fn dual_loss(&self, i: usize, ai: f64) -> f64 {
+        let wi = self.weight(i);
+        let ya = self.y[i] * ai;
+        wi * poly2::dual_max(ya / wi, self.params.smoothing) - self.shift * ya
+    }
+    fn d_dual_loss(&self, i: usize, ai: f64) -> f64 {
+        let wi = self.weight(i);
+        let yi = self.y[i];
+        yi * (poly2::d_dual_max(yi * ai / wi, self.params.smoothing) - self.shift)
+    }
+    fn d2_dual_loss(&self, i: usize, ai: f64) -> f64 {
+        let wi = self.weight(i);
+        let yi = self.y[i];
+        poly2::d2_dual_max(yi * ai / wi, self.params.smoothing) / wi
+    }
+    fn loss(&self, i: usize, ti: f64) -> f64 {
+        self.weight(i) * poly2::max(self.shift - self.y[i] * ti, self.params.smoothing)
+    }
+    fn d_loss(&self, i: usize, ti: f64) -> f64 {
+        -self.y[i]
+            * self.weight(i)
+            * poly2::d_max(self.shift - self.y[i] * ti, self.params.smoothing)
+    }
+    fn d2_loss(&self, i: usize, ti: f64) -> f64 {
+        self.weight(i) * poly2::d2_max(self.shift - self.y[i] * ti, self.params.smoothing)
     }
 }
