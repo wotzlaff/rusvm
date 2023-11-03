@@ -1,5 +1,5 @@
+use crate::kernel::Kernel;
 use crate::problem::Problem;
-use crate::{kernel::Kernel, max::poly2};
 use std::time::Instant;
 
 use super::status::{Status, StatusCode};
@@ -83,11 +83,10 @@ pub fn solve(
         }
 
         // compute decisions
-        for k in 0..problem.size() {
-            // status.dec[k] =
-            let tk = status.ka[k] + status.b + status.c * problem.sign(k);
-            status.g[k] = poly2::d_max(tk, problem.smoothing());
-            status.h[k] = poly2::d2_max(tk, problem.smoothing());
+        for i in 0..problem.size() {
+            let ti = status.ka[i] + status.b + status.c * problem.sign(i);
+            status.g[i] = problem.d_loss(i, ti);
+            status.h[i] = problem.d2_loss(i, ti);
         }
 
         step += 1;

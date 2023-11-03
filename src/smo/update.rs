@@ -17,8 +17,7 @@ pub fn update(
         let kj = kij[1];
         let pij = status.g[i] - status.g[j];
         let qij = ki[idx_i] + kj[idx_j] - 2.0 * ki[idx_j]
-            + problem.quad(status, i)
-            + problem.quad(status, j);
+            + problem.lambda() * (problem.quad(status, i) + problem.quad(status, j));
         let max_tij = f64::min(status.a[i] - problem.lb(i), problem.ub(j) - status.a[j]);
         let mut tij: f64 = f64::min(
             problem.lambda() * pij / f64::max(qij, problem.regularization()),

@@ -97,8 +97,7 @@ pub fn find_ws2(
             let d_upr = problem.ub(r) - status.a[r];
             if d_upr > 0.0 && pi0r > 0.0 {
                 let qi0 = ki0i0 + krr - 2.0 * ki0[idx_r]
-                    + problem.quad(status, i0)
-                    + problem.quad(status, r);
+                    + problem.lambda() * (problem.quad(status, i0) + problem.quad(status, r));
                 let di0r = descent(
                     qi0,
                     pi0r,
@@ -116,8 +115,7 @@ pub fn find_ws2(
             let d_dnr = status.a[r] - problem.lb(r);
             if d_dnr > 0.0 && prj1 > 0.0 {
                 let qj1 = kj1j1 + krr - 2.0 * kj1[idx_r]
-                    + problem.quad(status, j1)
-                    + problem.quad(status, r);
+                    + problem.lambda() * (problem.quad(status, j1) + problem.quad(status, r));
                 let drj1 = descent(
                     qj1,
                     prj1,

@@ -15,7 +15,7 @@ pub trait Problem {
     }
     fn quad(&self, status: &Status, i: usize) -> f64 {
         // TODO: get rid of lambda here!
-        self.lambda() * self.d2_dual_loss(i, status.a[i])
+        self.d2_dual_loss(i, status.a[i])
     }
     fn size(&self) -> usize;
     fn lb(&self, i: usize) -> f64;

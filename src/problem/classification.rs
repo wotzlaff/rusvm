@@ -37,9 +37,6 @@ impl<'a> Classification<'a> {
 }
 
 impl<'a> super::Problem for Classification<'a> {
-    fn quad(&self, _status: &Status, i: usize) -> f64 {
-        2.0 * self.params.smoothing * self.params.lambda / self.weight(i)
-    }
     fn grad(&self, status: &Status, i: usize) -> f64 {
         status.ka[i] - self.shift * self.y[i]
             + self.params.smoothing
