@@ -1,8 +1,8 @@
-# smorust
+# rusvm
 Solve SVM training problem using SMO.
 
 ## Installation
-`cargo install smorust`
+`cargo install rusvm`
 
 ## Usage
 TODO!

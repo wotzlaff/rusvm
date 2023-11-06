@@ -1,12 +1,12 @@
 [package]
-name = "smorust"
-description = "Solve SVM training problem using SMO"
-version = "0.1.5"
+name = "rusvm"
+description = "Solve SVM training problems"
+version = "0.1.6"
 authors = ["Nico Strasdat <nstrasdat@gmail.com>"]
 edition = "2021"
 license = "MIT"
 readme = "README.md"
-repository = "https://github.com/wotzlaff/smorust"
+repository = "https://github.com/wotzlaff/rusvm"
 keywords = ["smo", "svm", "machine-learning"]
 
 [dependencies]
