@@ -11,5 +11,5 @@ keywords = ["smo", "svm", "machine-learning"]
 
 [dependencies]
 ndarray = "0.15.0"
-ndarray-linalg = { version = "0.16", features = ["openblas-static"] }
+ndarray-linalg = { version = "0.16", features = ["intel-mkl-static"] }
 caches = "0.2.6"
