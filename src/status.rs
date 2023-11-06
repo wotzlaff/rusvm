@@ -1,4 +1,4 @@
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum StatusCode {
     Initialized,
     Optimal,
@@ -7,7 +7,7 @@ pub enum StatusCode {
     Callback,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Status {
     pub a: Vec<f64>,
     pub b: f64,
