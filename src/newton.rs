@@ -7,6 +7,7 @@ use std::time::Instant;
 
 use super::status::{Status, StatusCode};
 
+#[derive(Debug)]
 pub struct Params {
     pub tol: f64,
     pub max_steps: usize,
@@ -71,9 +72,9 @@ pub fn solve_with_status(
 
         // handle callback
         if let Some(callback_fn) = callback {
-            stop = callback_fn(&status);
-            if stop {
+            if callback_fn(&status) {
                 status.code = StatusCode::Callback;
+                stop = true;
             }
         };
 

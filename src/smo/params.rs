@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct Params {
     pub tol: f64,
     pub max_steps: usize,

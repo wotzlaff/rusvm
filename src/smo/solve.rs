@@ -53,9 +53,9 @@ pub fn solve_with_status(
 
         // handle callback
         if let Some(callback_fn) = callback {
-            stop = callback_fn(&status);
-            if stop {
+            if callback_fn(&status) {
                 status.code = StatusCode::Callback;
+                stop = true;
             }
         };
 
