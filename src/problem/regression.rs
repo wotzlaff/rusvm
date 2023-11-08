@@ -1,5 +1,4 @@
 use crate::max::poly2;
-use crate::status::Status;
 
 /// Basic SVM (ε-insensitive) regression problem
 pub struct Regression<'a> {

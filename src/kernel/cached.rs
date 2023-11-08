@@ -1,6 +1,7 @@
 use super::Kernel;
 use caches::{Cache, RawLRU};
 
+/// A struct to cache rows of a kernel matrix.
 pub struct CachedKernel<'a, K>
 where
     K: Kernel,
@@ -14,6 +15,7 @@ impl<K> CachedKernel<'_, K>
 where
     K: Kernel,
 {
+    /// Generates a cached version of the given kernel matrix.
     pub fn from(base: &K, capacity: usize) -> CachedKernel<'_, K> {
         CachedKernel {
             cache: RawLRU::new(capacity).unwrap(),

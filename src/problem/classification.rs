@@ -1,5 +1,4 @@
 use crate::max::poly2;
-use crate::status::Status;
 
 /// Basic SVM (hinge loss) classification problem
 pub struct Classification<'a> {

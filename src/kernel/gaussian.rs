@@ -1,5 +1,6 @@
 use ndarray::ArrayView2;
 
+/// A struct containing data for the computation of a kernel matrix with Gaussian kernel function.
 pub struct GaussianKernel<'a> {
     gamma: f64,
     data: ArrayView2<'a, f64>,
@@ -7,6 +8,7 @@ pub struct GaussianKernel<'a> {
 }
 
 impl GaussianKernel<'_> {
+    /// Creates a [`GaussianKernel`] for given scaling parameter `gamma` and feature matrix `data`.
     pub fn new(gamma: f64, data: ArrayView2<f64>) -> GaussianKernel {
         let &[n, nft] = data.shape() else {
             panic!("x has bad shape");

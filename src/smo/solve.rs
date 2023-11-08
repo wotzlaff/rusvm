@@ -7,6 +7,7 @@ use super::update::update;
 use super::ws::*;
 use super::Params;
 
+/// Uses the SMO method to solve the given training problem starting from the default initial point.
 pub fn solve(
     problem: &dyn Problem,
     kernel: &mut dyn Kernel,
@@ -18,6 +19,7 @@ pub fn solve(
     solve_with_status(status, problem, kernel, params, callback)
 }
 
+/// Uses the SMO method to solve the given training problem starting from a particular [`Status`].
 pub fn solve_with_status(
     status: Status,
     problem: &dyn Problem,

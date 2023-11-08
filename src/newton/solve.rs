@@ -7,6 +7,7 @@ use crate::kernel::Kernel;
 use crate::problem::Problem;
 use crate::status::{Status, StatusCode};
 
+/// Uses a version of Newton's method to solve the given training problem starting from the default initial point.
 pub fn solve(
     problem: &dyn Problem,
     kernel: &mut dyn Kernel,
@@ -17,6 +18,8 @@ pub fn solve(
     let status = Status::new(n);
     solve_with_status(status, problem, kernel, params, callback)
 }
+
+/// Uses a version of Newton's method to solve the given training problem starting from a particular [`Status`].
 pub fn solve_with_status(
     status: Status,
     problem: &dyn Problem,
