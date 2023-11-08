@@ -11,42 +11,60 @@ pub use regression::Regression;
 use crate::kernel::Kernel;
 use crate::status::Status;
 
+/// Base for training problem definition
 pub trait Problem {
+    /// Computes the ith component gradient of the dual objective function.
     fn grad(&self, status: &Status, i: usize) -> f64 {
         status.ka[i] + self.d_dual_loss(i, status.a[i])
     }
+    /// Computes the second derivative of the ith loss function.
     fn quad(&self, status: &Status, i: usize) -> f64 {
-        // TODO: get rid of lambda here!
         self.d2_dual_loss(i, status.a[i])
     }
-    fn size(&self) -> usize;
-    fn lb(&self, i: usize) -> f64;
-    fn ub(&self, i: usize) -> f64;
-    fn sign(&self, i: usize) -> f64;
-    fn is_optimal(&self, status: &Status, tol: f64) -> bool;
 
+    /// Returns the size of the optimization problem (the number of variables).
+    fn size(&self) -> usize;
+
+    /// Returns the lower bound of the ith variable.
+    fn lb(&self, i: usize) -> f64;
+    /// Returns the upper bound of the ith variable.
+    fn ub(&self, i: usize) -> f64;
+    /// Returns the sign of the ith variable.
+    fn sign(&self, i: usize) -> f64;
+
+    /// Returns the parameters of the training problem.
     fn params(&self) -> &Params;
+    /// Returns the regularization parameter lambda.
     fn lambda(&self) -> f64 {
         self.params().lambda
     }
+    /// Returns the smoothing parameter of the max function.
     fn smoothing(&self) -> f64 {
         self.params().smoothing
     }
+    /// Returns the bound on the 1-norm of the coefficient vector.
     fn max_asum(&self) -> f64 {
         self.params().max_asum
     }
+    /// Returns the regularization parameter used for descent estimation.
     fn regularization(&self) -> f64 {
         self.params().regularization
     }
 
+    /// Checks for optimality.
+    fn is_optimal(&self, status: &Status, tol: f64) -> bool {
+        self.lambda() * status.violation < tol
+    }
+    /// Checks whether the problem is shrunk.
     fn is_shrunk(&self, status: &Status, active_set: &Vec<usize>) -> bool {
         active_set.len() < status.a.len()
     }
-
+    /// Checks whether a bound on the 1-norm of the coefficient is set.
     fn has_max_asum(&self) -> bool {
         f64::is_finite(self.max_asum())
     }
 
+    /// Computes the primal and dual objective function values.
     fn objective(&self, status: &Status) -> (f64, f64) {
         let mut reg = 0.0;
         let mut loss_primal = 0.0;
@@ -73,13 +91,21 @@ pub trait Problem {
         (obj_primal, obj_dual)
     }
 
-    fn dual_loss(&self, i: usize, ai: f64) -> f64;
-    fn d_dual_loss(&self, i: usize, ai: f64) -> f64;
-    fn d2_dual_loss(&self, i: usize, ai: f64) -> f64;
+    /// Computes the ith loss function.
     fn loss(&self, i: usize, ti: f64) -> f64;
+    /// Computes the first derivative of the ith loss function.
     fn d_loss(&self, i: usize, ti: f64) -> f64;
+    /// Computes the second derivative of the ith loss function.
     fn d2_loss(&self, i: usize, ti: f64) -> f64;
 
+    /// Computes the ith dual loss function.
+    fn dual_loss(&self, i: usize, ai: f64) -> f64;
+    /// Computes the first derivative of the ith dual loss function.
+    fn d_dual_loss(&self, i: usize, ai: f64) -> f64;
+    /// Computes the second derivative of the ith dual loss function.
+    fn d2_dual_loss(&self, i: usize, ai: f64) -> f64;
+
+    /// Conducts the shrinking procedure.
     fn shrink(
         &self,
         kernel: &mut dyn Kernel,
@@ -101,7 +127,12 @@ pub trait Problem {
         kernel.restrict_active(&active_set, &new_active_set);
         *active_set = new_active_set;
     }
+
+    /// Revokes the shrinking procedure.
     fn unshrink(&self, kernel: &mut dyn Kernel, status: &mut Status, active_set: &mut Vec<usize>) {
+        if !self.is_shrunk(status, active_set) {
+            return;
+        }
         let lambda = self.params().lambda;
         let n = self.size();
         let new_active_set = (0..n).collect();

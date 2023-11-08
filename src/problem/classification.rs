@@ -1,14 +1,21 @@
 use crate::max::poly2;
 use crate::status::Status;
 
+/// Basic SVM (hinge loss) classification problem
 pub struct Classification<'a> {
     y: &'a [f64],
     w: Option<&'a [f64]>,
+    /// Parameters of the training problem
     pub params: super::Params,
+    /// Value of shift in the loss function: The typical value is `1`.
     pub shift: f64,
 }
 
 impl<'a> Classification<'a> {
+    /// Creates a [`Classification`] struct.
+    ///
+    /// * `y`: slice of labels with values `-1.0` or `+1.0`
+    /// * `params`: struct of problem parameters
     pub fn new(y: &[f64], params: super::Params) -> Classification {
         Classification {
             y,
@@ -25,11 +32,13 @@ impl<'a> Classification<'a> {
         }
     }
 
+    /// Sets the weights of the individual samples.
     pub fn with_weights(mut self, w: &'a [f64]) -> Self {
         self.w = Some(w);
         self
     }
 
+    /// Sets the value of the shift in the loss function.
     pub fn with_shift(mut self, shift: f64) -> Self {
         self.shift = shift;
         self
@@ -60,10 +69,6 @@ impl<'a> super::Problem for Classification<'a> {
         } else {
             -1.0
         }
-    }
-
-    fn is_optimal(&self, status: &Status, tol: f64) -> bool {
-        self.params.lambda * status.violation < tol
     }
 
     fn params(&self) -> &super::Params {

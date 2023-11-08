@@ -1,14 +1,21 @@
 use crate::max::poly2;
 use crate::status::Status;
 
+/// Basic SVM (ε-insensitive) regression problem
 pub struct Regression<'a> {
     y: &'a [f64],
     w: Option<&'a [f64]>,
+    /// Parameters of the training problem
     pub params: super::Params,
+    /// Value of the parameter ε in the loss function: The default value is `1e-6` (to prevent degeneration).
     pub epsilon: f64,
 }
 
 impl<'a> Regression<'a> {
+    /// Creates a [`Regression`] struct.
+    ///
+    /// * `y`: slice of labels with real values
+    /// * `params`: struct of problem parameters
     pub fn new(y: &[f64], params: super::Params) -> Regression {
         Regression {
             y,
@@ -25,13 +32,15 @@ impl<'a> Regression<'a> {
         }
     }
 
-    pub fn with_epsilon(mut self, epsilon: f64) -> Self {
-        self.epsilon = epsilon;
+    /// Sets the weights of the individual samples.
+    pub fn with_weights(mut self, w: &'a [f64]) -> Self {
+        self.w = Some(w);
         self
     }
 
-    pub fn with_weights(mut self, w: &'a [f64]) -> Self {
-        self.w = Some(w);
+    /// Sets the parameter ε in the loss function.
+    pub fn with_epsilon(mut self, epsilon: f64) -> Self {
+        self.epsilon = epsilon;
         self
     }
 }
@@ -62,10 +71,6 @@ impl<'a> super::Problem for Regression<'a> {
         } else {
             -1.0
         }
-    }
-
-    fn is_optimal(&self, status: &Status, tol: f64) -> bool {
-        self.params.lambda * status.violation < tol
     }
 
     fn params(&self) -> &super::Params {
