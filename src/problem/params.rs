@@ -1,7 +1,12 @@
+/// Common parameters of a training problem
 pub struct Params {
+    /// Extent of smoothing of the use max function
     pub smoothing: f64,
+    /// Regularization parameter in training problem
     pub lambda: f64,
+    /// Maximum 1-norm of coefficient vector for additional sparsity (comparable to parameter in ν-SVM)
     pub max_asum: f64,
+    /// Regularization parameter for descent estimation
     pub regularization: f64,
 }
 

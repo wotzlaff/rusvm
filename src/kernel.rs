@@ -1,15 +1,24 @@
-pub mod gaussian;
+//! Kernels
+
+mod gaussian;
 pub use gaussian::GaussianKernel;
-pub mod cached;
+mod cached;
 pub use cached::CachedKernel;
 
+/// An abstract kernel matrix
 pub trait Kernel {
+    /// Computes the ith row of the kernel matrix with entries according to `active_set` and saves it into the (preallocated) slice `ki`.
     fn compute_row(&self, i: usize, ki: &mut [f64], active_set: &Vec<usize>);
+
+    /// Returns the ith diagonal element of the kernel matrix.
     fn diag(&self, i: usize) -> f64;
 
+    /// Restricts (shrinks) the current active set (important for caching).
     fn restrict_active(&mut self, _old: &Vec<usize>, _new: &Vec<usize>) {}
+    /// Expands (unshrinks) the current active set.
     fn set_active(&mut self, _old: &Vec<usize>, _new: &Vec<usize>) {}
 
+    /// Computes a set of rows of the kernel matrix and hands them over to the callback `fun`.
     fn use_rows(
         &mut self,
         idxs: Vec<usize>,

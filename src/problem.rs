@@ -1,9 +1,11 @@
-pub mod params;
+//! Problems
+
+mod params;
 pub use params::Params;
 
-pub mod classification;
+mod classification;
 pub use classification::Classification;
-pub mod regression;
+mod regression;
 pub use regression::Regression;
 
 use crate::kernel::Kernel;
