@@ -6,6 +6,7 @@ mod max;
 pub mod newton;
 pub mod problem;
 pub mod smo;
+pub mod smonewt;
 
 mod status;
 pub use crate::status::{Status, StatusCode};

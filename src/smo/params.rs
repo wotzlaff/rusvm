@@ -35,4 +35,34 @@ impl Params {
             time_limit: f64::INFINITY,
         }
     }
+
+    /// Updates the verbosity level.
+    pub fn with_verbose(mut self, verbose: usize) -> Self {
+        self.verbose = verbose;
+        self
+    }
+
+    /// Updates the termination tolerance.
+    pub fn with_tol(mut self, tol: f64) -> Self {
+        self.tol = tol;
+        self
+    }
+
+    /// Updates the time limit.
+    pub fn with_time_limit(mut self, time_limit: f64) -> Self {
+        self.time_limit = time_limit;
+        self
+    }
+
+    /// Updates the maximum number of steps.
+    pub fn with_max_steps(mut self, max_steps: usize) -> Self {
+        self.max_steps = max_steps;
+        self
+    }
+
+    /// Updates the shrinking frequency.
+    pub fn with_shrinking_period(mut self, shrinking_period: usize) -> Self {
+        self.shrinking_period = shrinking_period;
+        self
+    }
 }
