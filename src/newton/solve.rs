@@ -34,7 +34,8 @@ pub fn solve_with_status(
     let mut stop = false;
     let mut last_step_descent = false;
 
-    // status.dec = vec![0.0; n];
+    let (obj_primal, _obj_dual) = problem.objective(&status);
+    status.value = obj_primal;
     let mut h = vec![0.0; n];
     let mut da = vec![0.0; n];
     loop {

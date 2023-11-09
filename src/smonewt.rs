@@ -33,8 +33,9 @@ pub fn solve(
     callback_newton: Option<&dyn Fn(&Status) -> bool>,
 ) -> Status {
     let n = problem.size();
-    let status = Status::new(n);
-    let status = smo::solve_with_status(status, problem, kernel, &params.smo, callback_smo);
-    kernel.set_active(&vec![], &(0..n).collect());
+    let mut status = smo::solve(problem, kernel, &params.smo, callback_smo);
+    let full_set = (0..n).collect();
+    kernel.set_active(&vec![], &full_set);
+    problem.recompute_kernel_product(kernel, &mut status, &full_set);
     newton::solve_with_status(status, problem, kernel, &params.newton, callback_newton)
 }
