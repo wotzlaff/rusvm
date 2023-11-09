@@ -25,9 +25,15 @@ impl Params {
 }
 
 /// Uses a combination of SMO and Newton's method to solve the given training problem starting from the default initial point.
-pub fn solve(problem: &dyn Problem, kernel: &mut dyn Kernel, params: &Params) -> Status {
+pub fn solve(
+    problem: &dyn Problem,
+    kernel: &mut dyn Kernel,
+    params: &Params,
+    callback_smo: Option<&dyn Fn(&Status) -> bool>,
+    callback_newton: Option<&dyn Fn(&Status) -> bool>,
+) -> Status {
     let n = problem.size();
     let status = Status::new(n);
-    let status = smo::solve_with_status(status, problem, kernel, &params.smo, None);
-    newton::solve_with_status(status, problem, kernel, &params.newton, None)
+    let status = smo::solve_with_status(status, problem, kernel, &params.smo, callback_smo);
+    newton::solve_with_status(status, problem, kernel, &params.newton, callback_newton)
 }
