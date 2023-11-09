@@ -32,6 +32,7 @@ pub fn solve_with_status(
     let n = problem.size();
     let mut step: usize = 0;
     let mut stop = false;
+    let mut last_step_descent = false;
 
     // status.dec = vec![0.0; n];
     let mut h = vec![0.0; n];
@@ -69,6 +70,7 @@ pub fn solve_with_status(
         let mut violation = 0.0;
         let mut asum = 0.0;
         let mut abs_asum = 0.0;
+        let mut gsum = 0.0;
         for i in 0..problem.size() {
             let ai = status.a[i];
             asum += ai;
@@ -76,6 +78,7 @@ pub fn solve_with_status(
             let ti = status.ka[i] + status.b + status.c * problem.sign(i);
             let gi = problem.d_loss(i, ti);
             status.g[i] = gi;
+            gsum += gi;
             violation += (ai + gi).abs();
             let hi = problem.d2_loss(i, ti);
             h[i] = hi;
@@ -100,8 +103,12 @@ pub fn solve_with_status(
             stop = true;
         }
 
+        // update time
+        let elapsed = start.elapsed().as_secs_f64();
+        status.time = elapsed;
+
         // handle progress output
-        if params.verbose > 0 && optimal {
+        if params.verbose > 0 && stop {
             println!(
                 "{:10} {:10.2} X {:3} {:10} {:10.03e} {:10.6} {:8.3}",
                 step, elapsed, "", "", status.violation, status.value, status.asum,
@@ -120,10 +127,8 @@ pub fn solve_with_status(
         let db;
         let gradient_step = n_active == 0;
         if n_active == 0 {
-            let mut gsum = 0.0;
             for i in 0..n {
                 da[i] = status.a[i] + status.g[i];
-                gsum += status.g[i];
             }
             db = gsum / problem.lambda();
             active_set = (0..n).collect();
@@ -164,7 +169,8 @@ pub fn solve_with_status(
         let (obj0, _obj_dual) = problem.objective(&status);
         let mut status_next = status.clone();
         let mut backstep = 0;
-        for _backstep in 0..10 {
+        for _backstep in 0..params.max_back_steps {
+            let mut pred_desc = gsum * db;
             status_next.b -= stepsize * db;
             // TODO: think about the use of vector da
             for &i in active_set.iter() {
@@ -175,15 +181,19 @@ pub fn solve_with_status(
                 kernel.compute_row(i, &mut ki, &(0..n).collect());
                 for (j, &kij) in ki.iter().enumerate() {
                     status_next.ka[j] -= kij * stepsize * da[i] / problem.lambda();
+                    let rj = status.a[j] + status.g[j];
+                    if rj != 0.0 {
+                        pred_desc += kij * da[i] * rj / problem.lambda();
+                    }
                 }
             }
             let (obj1, _obj_dual) = problem.objective(&status_next);
             status_next.value = obj1;
-            let dec: f64 = obj0 - obj1;
-            if dec > 0.0 {
+            let desc: f64 = obj0 - obj1;
+            if desc > params.sigma * pred_desc {
                 break;
             }
-            stepsize *= 0.1;
+            stepsize *= params.eta;
             status_next = status.clone();
             backstep += 1;
         }
@@ -201,7 +211,24 @@ pub fn solve_with_status(
                 status.asum,
             )
         }
-        status = status_next;
+        if backstep == params.max_back_steps {
+            if last_step_descent {
+                status.code = StatusCode::Optimal;
+                stop = true;
+            } else {
+                last_step_descent = true;
+                let full_set = (0..n).collect();
+                problem.recompute_kernel_product(kernel, &mut status, &full_set);
+            }
+        } else {
+            last_step_descent = false;
+            status = status_next;
+        }
+
+        // terminate
+        if stop {
+            break;
+        }
         step += 1;
     }
     status

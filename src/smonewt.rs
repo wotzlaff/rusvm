@@ -35,5 +35,6 @@ pub fn solve(
     let n = problem.size();
     let status = Status::new(n);
     let status = smo::solve_with_status(status, problem, kernel, &params.smo, callback_smo);
+    kernel.set_active(&vec![], &(0..n).collect());
     newton::solve_with_status(status, problem, kernel, &params.newton, callback_newton)
 }

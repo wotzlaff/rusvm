@@ -9,6 +9,12 @@ pub struct Params {
     pub verbose: usize,
     /// Time limit (in seconds)
     pub time_limit: f64,
+    /// Parameter σ in Armijo stepsize selection
+    pub sigma: f64,
+    /// Parameter η in Armijo stepsize selection
+    pub eta: f64,
+    /// Maximum number of steps in Armijo stepsize selection
+    pub max_back_steps: usize,
 }
 
 impl Params {
@@ -19,6 +25,9 @@ impl Params {
             max_steps: usize::MAX,
             verbose: 0,
             time_limit: f64::INFINITY,
+            sigma: 0.001,
+            eta: 0.1,
+            max_back_steps: 5,
         }
     }
 

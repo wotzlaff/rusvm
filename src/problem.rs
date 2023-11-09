@@ -128,17 +128,15 @@ pub trait Problem {
         *active_set = new_active_set;
     }
 
-    /// Revokes the shrinking procedure.
-    fn unshrink(&self, kernel: &mut dyn Kernel, status: &mut Status, active_set: &mut Vec<usize>) {
-        if !self.is_shrunk(status, active_set) {
-            return;
-        }
-        let lambda = self.params().lambda;
+    /// Recompute the product of kernel matrix and coefficient vector
+    fn recompute_kernel_product(
+        &self,
+        kernel: &mut dyn Kernel,
+        status: &mut Status,
+        active_set: &Vec<usize>,
+    ) {
         let n = self.size();
-        let new_active_set = (0..n).collect();
-        kernel.set_active(&active_set, &new_active_set);
-        *active_set = new_active_set;
-
+        let lambda = self.params().lambda;
         status.ka.fill(0.0);
         for (i, &ai) in status.a.iter().enumerate() {
             if ai == 0.0 {
@@ -151,5 +149,17 @@ pub trait Problem {
                 }
             })
         }
+    }
+
+    /// Revokes the shrinking procedure.
+    fn unshrink(&self, kernel: &mut dyn Kernel, status: &mut Status, active_set: &mut Vec<usize>) {
+        if !self.is_shrunk(status, active_set) {
+            return;
+        }
+        let n = self.size();
+        let new_active_set = (0..n).collect();
+        kernel.set_active(&active_set, &new_active_set);
+        *active_set = new_active_set;
+        self.recompute_kernel_product(kernel, status, &active_set);
     }
 }
