@@ -1,9 +1,10 @@
 //! Kernels
 
-mod gaussian;
-pub use gaussian::GaussianKernel;
 mod cached;
 pub use cached::CachedKernel;
+mod row;
+use ndarray::ArrayView2;
+pub use row::RowKernel;
 
 /// An abstract kernel matrix
 pub trait Kernel {
@@ -35,3 +36,21 @@ pub trait Kernel {
         fun(kidxs.iter().map(|ki| ki.as_slice()).collect());
     }
 }
+
+/// Builds a RBF/Gaussian kernel matrix.
+pub fn gaussian<'a>(arr: &'a ArrayView2<'a, f64>, gamma: f64) -> impl Kernel + 'a {
+    let data = arr.outer_iter().collect();
+    RowKernel::new(
+        data,
+        Box::new(move |&xi, &xj| {
+            let dij = xi
+                .iter()
+                .zip(xj.iter())
+                .fold(0.0, |acc, (xik, xjk)| acc + (xik - xjk).powi(2));
+            (-gamma * dij).exp()
+        }),
+        Box::new(move |&_xi| 1.0),
+    )
+}
+
+pub use gaussian as rbf;
