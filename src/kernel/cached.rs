@@ -51,6 +51,10 @@ where
         self.base.compute_row(i, ki, active_set);
     }
 
+    fn size(&self) -> usize {
+        self.base.size()
+    }
+
     fn use_rows(
         &mut self,
         idxs: Vec<usize>,

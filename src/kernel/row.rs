@@ -29,6 +29,10 @@ impl<T> super::Kernel for RowKernel<T> {
         }
     }
 
+    fn size(&self) -> usize {
+        self.data.len()
+    }
+
     fn diag(&self, i: usize) -> f64 {
         let xi = &self.data[i % self.data.len()];
         (self.diag_function)(xi)

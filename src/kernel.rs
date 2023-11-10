@@ -2,6 +2,8 @@
 
 mod cached;
 pub use cached::CachedKernel;
+mod precomputed;
+pub use precomputed::PrecomputedKernel;
 mod row;
 use ndarray::ArrayView2;
 pub use row::RowKernel;
@@ -10,6 +12,9 @@ pub use row::RowKernel;
 pub trait Kernel {
     /// Computes the ith row of the kernel matrix with entries according to `active_set` and saves it into the (preallocated) slice `ki`.
     fn compute_row(&self, i: usize, ki: &mut [f64], active_set: &Vec<usize>);
+
+    /// Returns the size of the matrix (number of samples)
+    fn size(&self) -> usize;
 
     /// Returns the ith diagonal element of the kernel matrix.
     fn diag(&self, i: usize) -> f64;
