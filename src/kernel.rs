@@ -11,7 +11,7 @@ pub use row::RowKernel;
 /// An abstract kernel matrix
 pub trait Kernel {
     /// Computes the ith row of the kernel matrix with entries according to `active_set` and saves it into the (preallocated) slice `ki`.
-    fn compute_row(&self, i: usize, ki: &mut [f64], active_set: &Vec<usize>);
+    fn compute_row(&self, i: usize, ki: &mut [f64], active_set: &[usize]);
 
     /// Returns the size of the matrix (number of samples)
     fn size(&self) -> usize;

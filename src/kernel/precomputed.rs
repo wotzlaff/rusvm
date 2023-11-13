@@ -15,7 +15,7 @@ impl PrecomputedKernel {
         for i in 0..n {
             let mut row_i = kernel_matrix.row_mut(i);
             let ki = row_i.as_slice_mut().unwrap();
-            base.compute_row(i, ki, &(0..=i).collect());
+            base.compute_row(i, ki, Vec::from_iter(0..=i).as_slice());
             for j in 0..i {
                 kernel_matrix[(j, i)] = kernel_matrix[(i, j)];
             }
@@ -25,7 +25,7 @@ impl PrecomputedKernel {
 }
 
 impl super::Kernel for PrecomputedKernel {
-    fn compute_row(&self, i: usize, ki: &mut [f64], active_set: &Vec<usize>) {
+    fn compute_row(&self, i: usize, ki: &mut [f64], active_set: &[usize]) {
         let n = self.size();
         for (idx_j, &j) in active_set.iter().enumerate() {
             ki[idx_j] = self.kernel_matrix[(i % n, j % n)]

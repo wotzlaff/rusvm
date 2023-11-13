@@ -21,7 +21,7 @@ impl<T> RowKernel<T> {
 }
 
 impl<T> super::Kernel for RowKernel<T> {
-    fn compute_row(&self, i: usize, ki: &mut [f64], active_set: &Vec<usize>) {
+    fn compute_row(&self, i: usize, ki: &mut [f64], active_set: &[usize]) {
         let xi = &self.data[i % self.data.len()];
         for (idx_j, &j) in active_set.iter().enumerate() {
             let xj = &self.data[j % self.data.len()];

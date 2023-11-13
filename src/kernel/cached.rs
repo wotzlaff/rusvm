@@ -47,7 +47,7 @@ impl<K> super::Kernel for CachedKernel<'_, K>
 where
     K: Kernel,
 {
-    fn compute_row(&self, i: usize, ki: &mut [f64], active_set: &Vec<usize>) {
+    fn compute_row(&self, i: usize, ki: &mut [f64], active_set: &[usize]) {
         self.base.compute_row(i, ki, active_set);
     }
 
