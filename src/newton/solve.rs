@@ -19,6 +19,118 @@ pub fn solve(
     solve_with_status(status, problem, kernel, params, callback)
 }
 
+struct ActiveSet {
+    size: usize,
+    size_positive: usize,
+    positive: Vec<usize>,
+    zeros: Vec<usize>,
+}
+
+impl ActiveSet {
+    fn new(size: usize) -> Self {
+        Self {
+            size,
+            size_positive: 0,
+            positive: Vec::new(),
+            zeros: Vec::new(),
+        }
+    }
+
+    fn size(&self) -> usize {
+        self.size_positive
+    }
+
+    fn all(&self) -> &[usize] {
+        &self.positive[..]
+    }
+
+    fn positives(&self) -> &[usize] {
+        &self.positive[..self.size_positive]
+    }
+
+    fn zeros(&self) -> &[usize] {
+        &self.positive[self.size_positive..]
+    }
+
+    fn make_full(&mut self) {
+        self.positive = (0..self.size).collect();
+    }
+
+    fn merge(&mut self) {
+        self.size_positive = self.positive.len();
+        self.positive.append(&mut self.zeros);
+    }
+}
+
+struct Direction {
+    a: Vec<f64>,
+    b: f64,
+    c: f64,
+}
+
+impl Direction {
+    fn new(size: usize) -> Self {
+        Self {
+            a: vec![0.0; size],
+            b: 0.0,
+            c: 0.0,
+        }
+    }
+}
+
+struct Sums {
+    a: f64,
+    g: f64,
+    da_zeros: f64,
+}
+
+impl Sums {
+    fn new() -> Self {
+        Self {
+            a: 0.0,
+            g: 0.0,
+            da_zeros: 0.0,
+        }
+    }
+}
+
+fn compute_decisions(
+    problem: &dyn Problem,
+    status: &mut Status,
+    h: &mut Vec<f64>,
+    dir: &mut Direction,
+) -> (Sums, ActiveSet) {
+    let mut active = ActiveSet::new(problem.size());
+    let mut sums = Sums::new();
+    let mut violation = 0.0;
+    let mut abs_asum = 0.0;
+    for i in 0..problem.size() {
+        let ai = status.a[i];
+        sums.a += ai;
+        abs_asum += problem.sign(i) * ai;
+        let ti = status.ka[i] + status.b + status.c * problem.sign(i);
+        let gi = problem.d_loss(i, ti);
+        status.g[i] = gi;
+        sums.g += gi;
+        violation += (ai + gi).abs();
+        let hi = problem.d2_loss(i, ti);
+        h[i] = hi;
+        if h[i] == 0.0 {
+            let dai = ai + gi;
+            dir.a[i] = dai;
+            if dai != 0.0 {
+                active.zeros.push(i);
+            }
+            sums.da_zeros += dai;
+        } else {
+            active.positive.push(i);
+        }
+    }
+    status.violation = violation + sums.a.abs();
+    status.asum = abs_asum;
+    (sums, active)
+}
+
 /// Uses a version of Newton's method to solve the given training problem starting from a particular [`Status`].
 pub fn solve_with_status(
     status: Status,
@@ -32,12 +144,14 @@ pub fn solve_with_status(
     let n = problem.size();
     let mut step: usize = 0;
     let mut stop = false;
+    let mut fresh_ka = false;
+    let mut recompute_ka = false;
     let mut last_step_descent = false;
 
     let (obj_primal, _obj_dual) = problem.objective(&status);
     status.value = obj_primal;
     let mut h = vec![0.0; n];
-    let mut da = vec![0.0; n];
+    let mut dir = Direction::new(n);
     loop {
         // update steps and time
         status.steps = step;
@@ -64,38 +178,16 @@ pub fn solve_with_status(
             }
         };
 
-        // compute decisions
-        let mut active_set = Vec::new();
-        let mut active_zeros = Vec::new();
-        let mut dasum_zeros = 0.0;
-        let mut violation = 0.0;
-        let mut asum = 0.0;
-        let mut abs_asum = 0.0;
-        let mut gsum = 0.0;
-        for i in 0..problem.size() {
-            let ai = status.a[i];
-            asum += ai;
-            abs_asum += problem.sign(i) * ai;
-            let ti = status.ka[i] + status.b + status.c * problem.sign(i);
-            let gi = problem.d_loss(i, ti);
-            status.g[i] = gi;
-            gsum += gi;
-            violation += (ai + gi).abs();
-            let hi = problem.d2_loss(i, ti);
-            h[i] = hi;
-            if h[i] == 0.0 {
-                let dai = ai + gi;
-                da[i] = dai;
-                if dai != 0.0 {
-                    active_zeros.push(i);
-                }
-                dasum_zeros += dai;
-            } else {
-                active_set.push(i);
-            }
+        // recompute ka if necessary
+        if recompute_ka {
+            recompute_ka = false;
+            fresh_ka = true;
+            let full_set = (0..n).collect();
+            problem.recompute_kernel_product(kernel, &mut status, &full_set);
         }
-        status.violation = violation + asum.abs();
-        status.asum = abs_asum;
+
+        // compute decisions
+        let (sums, mut active) = compute_decisions(problem, &mut status, &mut h, &mut dir);
 
         // check for optimality
         let optimal = problem.is_optimal(&status, params.tol);
@@ -121,26 +213,26 @@ pub fn solve_with_status(
             break;
         }
 
-        let n_active = active_set.len();
+        let n_active = active.positive.len();
 
         // TODO: think about the size of ki
         let mut ki = vec![0.0; n];
-        let db;
         let gradient_step = n_active == 0;
         if n_active == 0 {
+            // compute gradient direction
             for i in 0..n {
-                da[i] = status.a[i] + status.g[i];
+                dir.a[i] = status.a[i] + status.g[i];
             }
-            db = gsum / problem.lambda();
-            active_set = (0..n).collect();
+            dir.b = sums.g / problem.lambda();
+            active.make_full();
         } else {
             // compute Newton direction
-            active_set.append(&mut active_zeros);
+            active.merge();
             let mut mat = Array::zeros((n_active, n_active));
             let mut rhs = Array::zeros((n_active,));
             let mut rhs_i;
-            for (idx_i, &i) in active_set[..n_active].iter().enumerate() {
-                kernel.compute_row(i, &mut ki, &active_set);
+            for (idx_i, &i) in active.positives().iter().enumerate() {
+                kernel.compute_row(i, &mut ki, active.all());
                 for idx_j in 0..n_active {
                     mat[(idx_i, idx_j)] = ki[idx_j] / problem.lambda();
                     if idx_i == idx_j {
@@ -148,8 +240,8 @@ pub fn solve_with_status(
                     }
                 }
                 rhs_i = (status.a[i] + status.g[i]) / h[i];
-                for (idx_j, &j) in active_set[n_active..].iter().enumerate() {
-                    rhs_i -= da[j] * ki[n_active + idx_j] / problem.lambda();
+                for (idx_j, &j) in active.zeros().iter().enumerate() {
+                    rhs_i -= dir.a[j] * ki[n_active + idx_j] / problem.lambda();
                 }
                 rhs[idx_i] = rhs_i;
             }
@@ -157,11 +249,11 @@ pub fn solve_with_status(
             let mat_inv_rhs = mat_fact.solve_into(rhs).unwrap();
             let mat_inv_one = mat_fact.solve_into(Array::ones((n_active,))).unwrap();
 
-            let rhs_b = asum - dasum_zeros;
-            db = (mat_inv_rhs.sum() - rhs_b) / mat_inv_one.sum();
-            let da_nonzero = mat_inv_rhs - db * mat_inv_one;
-            for (idx_i, &i) in active_set[..n_active].iter().enumerate() {
-                da[i] = da_nonzero[idx_i];
+            let rhs_b = sums.a - sums.da_zeros;
+            dir.b = (mat_inv_rhs.sum() - rhs_b) / mat_inv_one.sum();
+            let da_nonzero = mat_inv_rhs - dir.b * mat_inv_one;
+            for (idx_i, &i) in active.positives().iter().enumerate() {
+                dir.a[i] = da_nonzero[idx_i];
             }
         }
 
@@ -171,20 +263,20 @@ pub fn solve_with_status(
         let mut status_next = status.clone();
         let mut backstep = 0;
         for _backstep in 0..params.max_back_steps {
-            let mut pred_desc = gsum * db;
-            status_next.b -= stepsize * db;
+            let mut pred_desc = sums.g * dir.b;
+            status_next.b -= stepsize * dir.b;
             // TODO: think about the use of vector da
-            for &i in active_set.iter() {
-                if da[i] == 0.0 {
+            for &i in active.all().iter() {
+                if dir.a[i] == 0.0 {
                     continue;
                 }
-                status_next.a[i] -= stepsize * da[i];
-                kernel.compute_row(i, &mut ki, &(0..n).collect());
+                status_next.a[i] -= stepsize * dir.a[i];
+                kernel.compute_row(i, &mut ki, Vec::from_iter(0..n).as_slice());
                 for (j, &kij) in ki.iter().enumerate() {
-                    status_next.ka[j] -= kij * stepsize * da[i] / problem.lambda();
+                    status_next.ka[j] -= kij * stepsize * dir.a[i] / problem.lambda();
                     let rj = status.a[j] + status.g[j];
                     if rj != 0.0 {
-                        pred_desc += kij * da[i] * rj / problem.lambda();
+                        pred_desc += kij * dir.a[i] * rj / problem.lambda();
                     }
                 }
             }
@@ -206,7 +298,7 @@ pub fn solve_with_status(
                 elapsed,
                 if gradient_step { "G" } else { "N" },
                 backstep,
-                active_set.len(),
+                active.size_positive,
                 status.violation,
                 status.value,
                 status.asum,
