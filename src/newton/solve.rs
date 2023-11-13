@@ -42,6 +42,7 @@ fn compute_decisions(problem: &dyn Problem, status_ext: &mut StatusExtended) {
             if dai != 0.0 {
                 active.zeros.push(i);
                 sums.da_zeros += dai;
+                sums.sda_zeros += si * dai;
             }
         } else {
             active.positive.push(i);

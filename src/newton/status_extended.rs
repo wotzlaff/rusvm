@@ -57,6 +57,7 @@ pub struct Sums {
     pub sa: f64,
     pub sg: f64,
     pub da_zeros: f64,
+    pub sda_zeros: f64,
 }
 
 impl Sums {
@@ -67,6 +68,7 @@ impl Sums {
             sa: 0.0,
             sg: 0.0,
             da_zeros: 0.0,
+            sda_zeros: 0.0,
         }
     }
 }

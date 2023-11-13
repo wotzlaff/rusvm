@@ -17,18 +17,12 @@ pub fn gradient(problem: &dyn Problem, _kernel: &mut dyn Kernel, status_ext: &mu
     status_ext.dir.b = status_ext.sums.g / problem.lambda();
 }
 
-pub fn newton_with_fallback(
+fn compute_matrix_and_rhs(
     problem: &dyn Problem,
     kernel: &mut dyn Kernel,
     status_ext: &mut StatusExtended,
-) -> DirectionType {
-    if status_ext.active.positive.len() == 0 {
-        gradient(problem, kernel, status_ext);
-        return DirectionType::Gradient;
-    }
-    status_ext.active.merge();
+) -> (Array2<f64>, Array1<f64>) {
     let h: &Vec<f64> = &status_ext.h;
-    let sums = &status_ext.sums;
     let active = &status_ext.active;
     let n_active = active.size_positive;
     let mut mat = Array::zeros((n_active, n_active));
@@ -48,16 +42,76 @@ pub fn newton_with_fallback(
         }
         rhs[idx_i] = rhs_i;
     }
+    (mat, rhs)
+}
+
+pub fn newton_with_fallback(
+    problem: &dyn Problem,
+    kernel: &mut dyn Kernel,
+    status_ext: &mut StatusExtended,
+) -> DirectionType {
+    status_ext.active.merge();
+    let n_active = status_ext.active.size_positive;
+    if n_active == 0 {
+        gradient(problem, kernel, status_ext);
+        return DirectionType::Gradient;
+    }
+    let mut signs = Array::zeros((n_active,));
+    if problem.has_max_asum() {
+        let mut sign_pos = false;
+        let mut sign_neg = false;
+        for (idx_i, &i) in status_ext.active.positives().iter().enumerate() {
+            let si = problem.sign(i);
+            sign_pos |= si > 0.0;
+            sign_neg |= si < 0.0;
+            signs[idx_i] = si;
+        }
+        if !(sign_pos && sign_neg) {
+            gradient(problem, kernel, status_ext);
+            return DirectionType::Gradient;
+        }
+    }
+    let (mat, rhs) = compute_matrix_and_rhs(problem, kernel, status_ext);
     let mat_fact = mat.factorize_into().unwrap();
-    let mat_inv_rhs = mat_fact.solve_into(rhs).unwrap();
+    let mat_inv_rhs = mat_fact.solve(&rhs).unwrap();
     let mat_inv_one = mat_fact.solve_into(Array::ones((n_active,))).unwrap();
 
+    let sums = &status_ext.sums;
     let rhs_b = sums.a - sums.da_zeros;
-    let db = (mat_inv_rhs.sum() - rhs_b) / mat_inv_one.sum();
-    status_ext.dir.b = db;
-    let da_nonzero = mat_inv_rhs - db * mat_inv_one;
-    for (idx_i, &i) in active.positives().iter().enumerate() {
-        status_ext.dir.a[i] = da_nonzero[idx_i];
+    if problem.has_max_asum() {
+        let rhs_c = sums.sa - problem.max_asum() - sums.sda_zeros;
+        let mat_inv_signs = mat_fact.solve(&signs).unwrap();
+        let q00 = mat_inv_one.dot(&mat_inv_one);
+        let q01 = mat_inv_one.dot(&mat_inv_signs);
+        let q11 = mat_inv_signs.dot(&mat_inv_signs);
+        let det = q00 * q11 - q01 * q01;
+        let p0 = mat_inv_one.dot(&rhs) - rhs_b;
+        let p1 = mat_inv_signs.dot(&rhs) - rhs_c;
+        let db = (q11 * p0 - q01 * p1) / det;
+        status_ext.dir.b = db;
+        let dc = (q00 * p1 - q01 * p0) / det;
+        status_ext.dir.c = dc;
+        println!("res0 = {}", q00 * db + q01 * dc - p0);
+        println!("res1 = {}", q01 * db + q11 * dc - p1);
+        let da_nonzero = mat_inv_rhs - db * mat_inv_one - dc * mat_inv_signs;
+        for (idx_i, &i) in status_ext.active.positives().iter().enumerate() {
+            status_ext.dir.a[i] = da_nonzero[idx_i];
+        }
+
+        let mut tmp_1 = 0.0;
+        let mut tmp_2 = 0.0;
+        for (i, &dai) in status_ext.dir.a.iter().enumerate() {
+            tmp_1 += dai;
+            tmp_2 += problem.sign(i) * dai;
+        }
+        println!("tmp = {} / {}", tmp_1, tmp_2);
+    } else {
+        let db = (mat_inv_rhs.sum() - rhs_b) / mat_inv_one.sum();
+        status_ext.dir.b = db;
+        let da_nonzero = mat_inv_rhs - db * mat_inv_one;
+        for (idx_i, &i) in status_ext.active.positives().iter().enumerate() {
+            status_ext.dir.a[i] = da_nonzero[idx_i];
+        }
     }
     return DirectionType::Newton;
 }
