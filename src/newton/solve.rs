@@ -3,6 +3,7 @@ use std::time::Instant;
 use super::params::Params;
 use super::status_extended::{ActiveSet, Direction, StatusExtended, Sums};
 use crate::kernel::Kernel;
+use crate::newton::direction::DirectionType;
 use crate::problem::Problem;
 use crate::status::{Status, StatusCode};
 
@@ -46,7 +47,11 @@ fn compute_decisions(problem: &dyn Problem, status_ext: &mut StatusExtended) {
             active.positive.push(i);
         }
     }
-    status_ext.status.violation = violation + sums.a.abs();
+    violation += sums.a.abs();
+    if problem.has_max_asum() {
+        violation += (abs_asum - problem.max_asum()).abs();
+    }
+    status_ext.status.violation = violation;
     status_ext.status.asum = abs_asum;
     status_ext.active = active;
     status_ext.sums = sums;
@@ -100,6 +105,7 @@ pub fn solve_with_status(
     let n = problem.size();
     let mut step: usize = 0;
     let mut stop = false;
+    let mut final_step = false;
     let mut fresh_ka = false;
     let mut recompute_ka = false;
     let mut last_step_descent = false;
@@ -121,21 +127,26 @@ pub fn solve_with_status(
         let elapsed = start.elapsed().as_secs_f64();
         status_ext.status.time = elapsed;
 
+        if final_step {
+            status_ext.status.code = StatusCode::Optimal;
+            stop = true;
+        }
+
         // handle step limit
-        if step >= params.max_steps {
+        if !stop && step >= params.max_steps {
             status_ext.status.code = StatusCode::MaxSteps;
             stop = true;
         }
 
         // handle time limit
-        if params.time_limit > 0.0 && elapsed >= params.time_limit {
+        if !stop && params.time_limit > 0.0 && elapsed >= params.time_limit {
             status_ext.status.code = StatusCode::TimeLimit;
             stop = true;
         }
 
         // handle callback
         if let Some(callback_fn) = callback {
-            if callback_fn(&status_ext.status) {
+            if !stop && callback_fn(&status_ext.status) {
                 status_ext.status.code = StatusCode::Callback;
                 stop = true;
             }
@@ -158,8 +169,12 @@ pub fn solve_with_status(
         // check for optimality
         let optimal = problem.is_optimal(&status_ext.status, params.tol);
         if optimal {
-            status_ext.status.code = StatusCode::Optimal;
-            stop = true;
+            if fresh_ka {
+                final_step = true;
+            } else {
+                recompute_ka = true;
+                continue;
+            }
         }
 
         // update time
@@ -185,16 +200,9 @@ pub fn solve_with_status(
             break;
         }
 
-        // TODO: think about the size of ki
-        let n_active = status_ext.active.positive.len();
-        let gradient_step = n_active == 0;
-        if n_active == 0 {
-            // compute gradient direction
-            super::direction::gradient(problem, kernel, &mut status_ext);
-        } else {
-            // compute Newton direction
-            super::direction::newton(problem, kernel, &mut status_ext);
-        }
+        // compute Newton or gradient direction
+        let direction_type =
+            super::direction::newton_with_fallback(problem, kernel, &mut status_ext);
 
         let mut stepsize = 1.0;
 
@@ -220,7 +228,10 @@ pub fn solve_with_status(
                 "{:10} {:10.2} {} {:3} {:10} {:10.03e} {:10.6} {:8.3}",
                 step,
                 elapsed,
-                if gradient_step { "G" } else { "N" },
+                match direction_type {
+                    DirectionType::Gradient => "G",
+                    DirectionType::Newton => "N",
+                },
                 backstep,
                 status_ext.active.size_positive,
                 status_ext.status.violation,

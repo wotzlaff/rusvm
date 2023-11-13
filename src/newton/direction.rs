@@ -4,6 +4,11 @@ use crate::problem::Problem;
 use ndarray::prelude::*;
 use ndarray_linalg::{FactorizeInto, Solve};
 
+pub enum DirectionType {
+    Gradient,
+    Newton,
+}
+
 pub fn gradient(problem: &dyn Problem, _kernel: &mut dyn Kernel, status_ext: &mut StatusExtended) {
     status_ext.active.make_full();
     for i in 0..status_ext.active.size {
@@ -12,7 +17,15 @@ pub fn gradient(problem: &dyn Problem, _kernel: &mut dyn Kernel, status_ext: &mu
     status_ext.dir.b = status_ext.sums.g / problem.lambda();
 }
 
-pub fn newton(problem: &dyn Problem, kernel: &mut dyn Kernel, status_ext: &mut StatusExtended) {
+pub fn newton_with_fallback(
+    problem: &dyn Problem,
+    kernel: &mut dyn Kernel,
+    status_ext: &mut StatusExtended,
+) -> DirectionType {
+    if status_ext.active.positive.len() == 0 {
+        gradient(problem, kernel, status_ext);
+        return DirectionType::Gradient;
+    }
     status_ext.active.merge();
     let h: &Vec<f64> = &status_ext.h;
     let sums = &status_ext.sums;
@@ -46,4 +59,5 @@ pub fn newton(problem: &dyn Problem, kernel: &mut dyn Kernel, status_ext: &mut S
     for (idx_i, &i) in active.positives().iter().enumerate() {
         status_ext.dir.a[i] = da_nonzero[idx_i];
     }
+    return DirectionType::Newton;
 }
