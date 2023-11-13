@@ -25,12 +25,7 @@ pub trait Kernel {
     fn set_active(&mut self, _old: &Vec<usize>, _new: &Vec<usize>) {}
 
     /// Computes a set of rows of the kernel matrix and hands them over to the callback `fun`.
-    fn use_rows(
-        &mut self,
-        idxs: Vec<usize>,
-        active_set: &Vec<usize>,
-        fun: &mut dyn FnMut(Vec<&[f64]>),
-    ) {
+    fn use_rows(&mut self, idxs: &[usize], active_set: &[usize], fun: &mut dyn FnMut(Vec<&[f64]>)) {
         let mut kidxs = Vec::with_capacity(idxs.len());
         let active_size = active_set.len();
         for &idx in idxs.iter() {

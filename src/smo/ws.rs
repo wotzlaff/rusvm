@@ -78,7 +78,7 @@ pub fn find_ws2(
     let mut idx_i1 = idx_i0;
 
     let diags: Vec<f64> = active_set.iter().map(|&i| kernel.diag(i)).collect();
-    kernel.use_rows([i0, j1].to_vec(), &active_set, &mut |kij: Vec<&[f64]>| {
+    kernel.use_rows([i0, j1].as_slice(), &active_set, &mut |kij: Vec<&[f64]>| {
         let ki0 = kij[0];
         let kj1 = kij[1];
         let ki0i0 = ki0[idx_i0];

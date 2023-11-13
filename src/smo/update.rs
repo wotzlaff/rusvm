@@ -12,7 +12,7 @@ pub fn update(
 ) {
     let i = active_set[idx_i];
     let j = active_set[idx_j];
-    kernel.use_rows([i, j].to_vec(), &active_set, &mut |kij: Vec<&[f64]>| {
+    kernel.use_rows([i, j].as_slice(), &active_set, &mut |kij: Vec<&[f64]>| {
         let ki = kij[0];
         let kj = kij[1];
         let pij = status.g[i] - status.g[j];

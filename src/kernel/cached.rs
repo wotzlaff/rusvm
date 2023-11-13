@@ -55,12 +55,7 @@ where
         self.base.size()
     }
 
-    fn use_rows(
-        &mut self,
-        idxs: Vec<usize>,
-        active_set: &Vec<usize>,
-        fun: &mut dyn FnMut(Vec<&[f64]>),
-    ) {
+    fn use_rows(&mut self, idxs: &[usize], active_set: &[usize], fun: &mut dyn FnMut(Vec<&[f64]>)) {
         let poss: Vec<_> = idxs
             .iter()
             .map(|&idx| match self.cache.get(&idx) {

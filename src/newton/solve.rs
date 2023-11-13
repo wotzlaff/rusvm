@@ -145,8 +145,11 @@ pub fn solve_with_status(
         if recompute_ka {
             recompute_ka = false;
             fresh_ka = true;
-            let full_set = (0..n).collect();
-            problem.recompute_kernel_product(kernel, &mut status_ext.status, &full_set);
+            problem.recompute_kernel_product(
+                kernel,
+                &mut status_ext.status,
+                Vec::from_iter(0..n).as_slice(),
+            );
         }
 
         // compute decisions
@@ -231,8 +234,11 @@ pub fn solve_with_status(
                 stop = true;
             } else {
                 last_step_descent = true;
-                let full_set = (0..n).collect();
-                problem.recompute_kernel_product(kernel, &mut status_ext.status, &full_set);
+                problem.recompute_kernel_product(
+                    kernel,
+                    &mut status_ext.status,
+                    Vec::from_iter(0..n).as_slice(),
+                );
             }
         } else {
             last_step_descent = false;

@@ -133,7 +133,7 @@ pub trait Problem {
         &self,
         kernel: &mut dyn Kernel,
         status: &mut Status,
-        active_set: &Vec<usize>,
+        active_set: &[usize],
     ) {
         let n = self.size();
         let lambda = self.params().lambda;
@@ -142,7 +142,7 @@ pub trait Problem {
             if ai == 0.0 {
                 continue;
             }
-            kernel.use_rows([i].to_vec(), &active_set, &mut |ki_vec: Vec<&[f64]>| {
+            kernel.use_rows([i].as_slice(), active_set, &mut |ki_vec: Vec<&[f64]>| {
                 let ki = ki_vec[0];
                 for k in 0..n {
                     status.ka[k] += ai / lambda * ki[k];
