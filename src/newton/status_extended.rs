@@ -29,10 +29,6 @@ impl ActiveSet {
         &self.positive[self.size_positive..]
     }
 
-    pub fn make_full(&mut self) {
-        self.positive = (0..self.size).collect();
-    }
-
     pub fn merge(&mut self) {
         self.size_positive = self.positive.len();
         self.positive.append(&mut self.zeros);
@@ -58,6 +54,8 @@ impl Direction {
 pub struct Sums {
     pub a: f64,
     pub g: f64,
+    pub sa: f64,
+    pub sg: f64,
     pub da_zeros: f64,
 }
 
@@ -66,6 +64,8 @@ impl Sums {
         Self {
             a: 0.0,
             g: 0.0,
+            sa: 0.0,
+            sg: 0.0,
             da_zeros: 0.0,
         }
     }

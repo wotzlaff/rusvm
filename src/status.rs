@@ -11,6 +11,8 @@ pub enum StatusCode {
     TimeLimit,
     /// Stopped by the callbcak function
     Callback,
+    /// Step not possible
+    NoStepPossible,
 }
 
 #[derive(Clone, Debug)]

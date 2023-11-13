@@ -7,11 +7,11 @@ use ndarray_linalg::{FactorizeInto, Solve};
 pub enum DirectionType {
     Gradient,
     Newton,
+    NoStep,
 }
 
 pub fn gradient(problem: &dyn Problem, _kernel: &mut dyn Kernel, status_ext: &mut StatusExtended) {
-    status_ext.active.make_full();
-    for i in 0..status_ext.active.size {
+    for i in 0..problem.size() {
         status_ext.dir.a[i] = status_ext.status.a[i] + status_ext.status.g[i];
     }
     status_ext.dir.b = status_ext.sums.g / problem.lambda();

@@ -27,7 +27,7 @@ impl Params {
             time_limit: f64::INFINITY,
             sigma: 0.001,
             eta: 0.1,
-            max_back_steps: 5,
+            max_back_steps: 8,
         }
     }
 

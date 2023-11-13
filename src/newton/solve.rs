@@ -23,16 +23,16 @@ fn compute_decisions(problem: &dyn Problem, status_ext: &mut StatusExtended) {
     let mut active = ActiveSet::new(problem.size());
     let mut sums = Sums::new();
     let mut violation = 0.0;
-    let mut abs_asum = 0.0;
     for i in 0..problem.size() {
         let ai = status_ext.status.a[i];
+        let si = problem.sign(i);
         sums.a += ai;
-        abs_asum += problem.sign(i) * ai;
-        let ti =
-            status_ext.status.ka[i] + status_ext.status.b + status_ext.status.c * problem.sign(i);
+        sums.sa += si * ai;
+        let ti = status_ext.status.ka[i] + status_ext.status.b + status_ext.status.c * si;
         let gi = problem.d_loss(i, ti);
         status_ext.status.g[i] = gi;
         sums.g += gi;
+        sums.sg += gi * si;
         violation += (ai + gi).abs();
         let hi = problem.d2_loss(i, ti);
         status_ext.h[i] = hi;
@@ -41,18 +41,18 @@ fn compute_decisions(problem: &dyn Problem, status_ext: &mut StatusExtended) {
             status_ext.dir.a[i] = dai;
             if dai != 0.0 {
                 active.zeros.push(i);
+                sums.da_zeros += dai;
             }
-            sums.da_zeros += dai;
         } else {
             active.positive.push(i);
         }
     }
     violation += sums.a.abs();
     if problem.has_max_asum() {
-        violation += (abs_asum - problem.max_asum()).abs();
+        violation += (sums.sa - problem.max_asum()).abs();
     }
     status_ext.status.violation = violation;
-    status_ext.status.asum = abs_asum;
+    status_ext.status.asum = sums.sa;
     status_ext.active = active;
     status_ext.sums = sums;
 }
@@ -68,9 +68,12 @@ fn update_status(
     let status = &status_ext.status;
     let mut status_next = status.clone();
     let mut pred_desc = sums.g * dir.b;
+    if problem.has_max_asum() {
+        pred_desc += dir.c * (sums.sg + problem.max_asum());
+    }
     status_next.b -= stepsize * dir.b;
-    // TODO: think about the use of vector da
-    for &i in status_ext.active.all().iter() {
+    status_next.c -= stepsize * dir.c;
+    for i in 0..problem.size() {
         if dir.a[i] == 0.0 {
             continue;
         }
@@ -78,7 +81,7 @@ fn update_status(
         kernel.compute_row(
             i,
             &mut status_ext.ki,
-            Vec::from_iter(0..status_ext.active.size).as_slice(),
+            Vec::from_iter(0..problem.size()).as_slice(),
         );
         for (j, &kij) in status_ext.ki.iter().enumerate() {
             status_next.ka[j] -= kij * stepsize * dir.a[i] / problem.lambda();
@@ -91,6 +94,45 @@ fn update_status(
     let (obj1, _obj_dual) = problem.objective(&status_next);
     status_next.value = obj1;
     (pred_desc, status_next)
+}
+
+fn descent_step(
+    problem: &dyn Problem,
+    kernel: &mut dyn Kernel,
+    params: &Params,
+    status_ext: &mut StatusExtended,
+    try_newton: bool,
+) -> (DirectionType, f64, usize) {
+    // compute Newton or gradient direction
+    let mut direction_type = if try_newton {
+        super::direction::newton_with_fallback(problem, kernel, status_ext)
+    } else {
+        super::direction::gradient(problem, kernel, status_ext);
+        DirectionType::Gradient
+    };
+    let (obj0, _obj_dual) = problem.objective(&status_ext.status);
+    let mut stepsize = 1.0;
+    let mut backstep = 0;
+    let desc = loop {
+        let (pred_desc, status_next) = update_status(problem, kernel, status_ext, stepsize);
+        if pred_desc < 0.0 {
+            direction_type = DirectionType::NoStep;
+            break 0.0;
+        }
+        let obj1 = status_next.value;
+        let desc: f64 = obj0 - obj1;
+        if desc > params.sigma * stepsize * pred_desc {
+            status_ext.status = status_next;
+            break desc;
+        }
+        stepsize *= params.eta;
+        backstep += 1;
+        if backstep >= params.max_back_steps {
+            direction_type = DirectionType::NoStep;
+            break 0.0;
+        }
+    };
+    (direction_type, desc, backstep)
 }
 
 /// Uses a version of Newton's method to solve the given training problem starting from a particular [`Status`].
@@ -108,7 +150,6 @@ pub fn solve_with_status(
     let mut final_step = false;
     let mut fresh_ka = false;
     let mut recompute_ka = false;
-    let mut last_step_descent = false;
 
     let mut status_ext = StatusExtended {
         status: status.clone(),
@@ -200,67 +241,64 @@ pub fn solve_with_status(
             break;
         }
 
-        // compute Newton or gradient direction
-        let direction_type =
-            super::direction::newton_with_fallback(problem, kernel, &mut status_ext);
+        // find stepsize and update
+        let (direction_type, desc, backstep) =
+            descent_step(problem, kernel, params, &mut status_ext, true);
 
-        let mut stepsize = 1.0;
+        // handle termination
+        if matches!(direction_type, DirectionType::NoStep) {
+            if !fresh_ka {
+                recompute_ka = true;
+            }
+        } else {
+            if desc.powi(2) < params.tol {
+                if fresh_ka {
+                    status_ext.status.code = StatusCode::Optimal;
+                    stop = true;
+                }
+                recompute_ka = true;
+            }
+            fresh_ka = false;
+        }
 
-        let (obj0, _obj_dual) = problem.objective(&status_ext.status);
-        let mut backstep = 0;
-        let status_next = loop {
-            let (pred_desc, status_next) =
-                update_status(problem, kernel, &mut status_ext, stepsize);
-            let obj1 = status_next.value;
-            let desc: f64 = obj0 - obj1;
-            if desc > params.sigma * pred_desc {
-                break status_next;
+        if !final_step && matches!(direction_type, DirectionType::NoStep) && fresh_ka {
+            let (_direction_type, desc, _backstep) =
+                descent_step(problem, kernel, params, &mut status_ext, true);
+            if desc.powi(2) < params.tol {
+                status_ext.status.code = StatusCode::NoStepPossible;
+                stop = true;
             }
-            stepsize *= params.eta;
-            backstep += 1;
-            if backstep >= params.max_back_steps {
-                break status_ext.status.clone();
-            }
-        };
+        }
+
         // handle progress output
         if params.verbose > 0 && (step % params.verbose == 0 || optimal) {
             println!(
-                "{:10} {:10.2} {} {:3} {:10} {:10.03e} {:10.6} {:8.3}",
+                "{:10} {:10.2} {} {:3} {:10} {:10.03e} {:10.03e} {:10.6} {:8.3}",
                 step,
                 elapsed,
                 match direction_type {
                     DirectionType::Gradient => "G",
                     DirectionType::Newton => "N",
+                    DirectionType::NoStep => "?",
                 },
                 backstep,
                 status_ext.active.size_positive,
                 status_ext.status.violation,
+                desc,
                 status_ext.status.value,
                 status_ext.status.asum,
             )
         }
-        if backstep == params.max_back_steps {
-            if last_step_descent {
-                status_ext.status.code = StatusCode::Optimal;
-                stop = true;
-            } else {
-                last_step_descent = true;
-                problem.recompute_kernel_product(
-                    kernel,
-                    &mut status_ext.status,
-                    Vec::from_iter(0..n).as_slice(),
-                );
-            }
-        } else {
-            last_step_descent = false;
-            status_ext.status = status_next;
-        }
+        step += 1;
 
         // terminate
+        if final_step {
+            status_ext.status.code = StatusCode::Optimal;
+            stop = true;
+        }
         if stop {
             break;
         }
-        step += 1;
     }
     status
 }
