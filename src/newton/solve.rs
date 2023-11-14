@@ -226,9 +226,10 @@ pub fn solve_with_status(
         // handle progress output
         if params.verbose > 0 && stop {
             println!(
-                "{:10} {:10.2} X {:3} {:10} {:10.03e} {:10.6} {:8.3}",
+                "{:10} {:10.2} X {:3} {:10} {:10} {:10.03e} {:10.6} {:8.3}",
                 step,
                 elapsed,
+                "",
                 "",
                 "",
                 status_ext.status.violation,
@@ -274,7 +275,7 @@ pub fn solve_with_status(
         // handle progress output
         if params.verbose > 0 && (step % params.verbose == 0 || optimal) {
             println!(
-                "{:10} {:10.2} {} {:3} {:10} {:10.03e} {:10.03e} {:10.6} {:8.3}",
+                "{:10} {:10.2} {} {:3} {:10} {:10} {:10.03e} {:10.03e} {:10.6} {:8.3}",
                 step,
                 elapsed,
                 match direction_type {
@@ -284,6 +285,7 @@ pub fn solve_with_status(
                 },
                 backstep,
                 status_ext.active.size_positive,
+                status_ext.active.all().len(),
                 status_ext.status.violation,
                 desc,
                 status_ext.status.value,
