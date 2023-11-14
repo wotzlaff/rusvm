@@ -78,7 +78,7 @@ pub fn newton_with_fallback(
 
     let sums = &status_ext.sums;
     let rhs_b = sums.a - sums.da_zeros;
-    if problem.has_max_asum() {
+    let da_nonzero = if problem.has_max_asum() {
         // solve system with two additional constraints
         let rhs_c = sums.sa - problem.max_asum() - sums.sda_zeros;
         let mat_inv_signs = mat_fact.solve(&signs).unwrap();
@@ -89,22 +89,20 @@ pub fn newton_with_fallback(
         let det = q00 * q11 - q01 * q01;
         let p0 = mat_inv_one.dot(&rhs) - rhs_b;
         let p1 = mat_inv_signs.dot(&rhs) - rhs_c;
+        // extract solution for scalar variables
         let db = (q11 * p0 - q01 * p1) / det;
         status_ext.dir.b = db;
         let dc = (q00 * p1 - q01 * p0) / det;
         status_ext.dir.c = dc;
-        let da_nonzero = mat_inv_rhs - db * mat_inv_one - dc * mat_inv_signs;
-        for (idx_i, &i) in status_ext.active.positives().iter().enumerate() {
-            status_ext.dir.a[i] = da_nonzero[idx_i];
-        }
+        mat_inv_rhs - db * mat_inv_one - dc * mat_inv_signs
     } else {
         // solve system with one additional constraints
         let db = (mat_inv_rhs.sum() - rhs_b) / mat_inv_one.sum();
         status_ext.dir.b = db;
-        let da_nonzero = mat_inv_rhs - db * mat_inv_one;
-        for (idx_i, &i) in status_ext.active.positives().iter().enumerate() {
-            status_ext.dir.a[i] = da_nonzero[idx_i];
-        }
+        mat_inv_rhs - db * mat_inv_one
+    };
+    for (idx_i, &i) in status_ext.active.positives().iter().enumerate() {
+        status_ext.dir.a[i] = da_nonzero[idx_i];
     }
     return DirectionType::Newton;
 }
