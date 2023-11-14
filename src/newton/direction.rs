@@ -81,9 +81,9 @@ pub fn newton_with_fallback(
     if problem.has_max_asum() {
         let rhs_c = sums.sa - problem.max_asum() - sums.sda_zeros;
         let mat_inv_signs = mat_fact.solve(&signs).unwrap();
-        let q00 = mat_inv_one.dot(&mat_inv_one);
-        let q01 = mat_inv_one.dot(&mat_inv_signs);
-        let q11 = mat_inv_signs.dot(&mat_inv_signs);
+        let q00 = mat_inv_one.sum();
+        let q01 = mat_inv_signs.sum();
+        let q11 = mat_inv_signs.dot(&signs);
         let det = q00 * q11 - q01 * q01;
         let p0 = mat_inv_one.dot(&rhs) - rhs_b;
         let p1 = mat_inv_signs.dot(&rhs) - rhs_c;
@@ -91,20 +91,10 @@ pub fn newton_with_fallback(
         status_ext.dir.b = db;
         let dc = (q00 * p1 - q01 * p0) / det;
         status_ext.dir.c = dc;
-        println!("res0 = {}", q00 * db + q01 * dc - p0);
-        println!("res1 = {}", q01 * db + q11 * dc - p1);
         let da_nonzero = mat_inv_rhs - db * mat_inv_one - dc * mat_inv_signs;
         for (idx_i, &i) in status_ext.active.positives().iter().enumerate() {
             status_ext.dir.a[i] = da_nonzero[idx_i];
         }
-
-        let mut tmp_1 = 0.0;
-        let mut tmp_2 = 0.0;
-        for (i, &dai) in status_ext.dir.a.iter().enumerate() {
-            tmp_1 += dai;
-            tmp_2 += problem.sign(i) * dai;
-        }
-        println!("tmp = {} / {}", tmp_1, tmp_2);
     } else {
         let db = (mat_inv_rhs.sum() - rhs_b) / mat_inv_one.sum();
         status_ext.dir.b = db;
