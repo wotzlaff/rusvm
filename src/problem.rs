@@ -7,6 +7,8 @@ mod classification;
 pub use classification::Classification;
 mod regression;
 pub use regression::Regression;
+mod lssvm;
+pub use lssvm::LSSVM;
 
 use crate::kernel::Kernel;
 use crate::status::Status;
