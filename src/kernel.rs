@@ -37,6 +37,15 @@ pub trait Kernel {
     }
 }
 
+/// Derivative of kernel matrix is available
+pub trait Deriv {
+    /// Computes the derivative of the ith row of the kernel matrix wrt hyperparameters.
+    fn compute_row_deriv(&self, i: usize, dkis: &[&mut [f64]], active_set: &[usize]);
+
+    /// Returns the number of hyperparameters.
+    fn num_params(&self) -> usize;
+}
+
 /// Builds a RBF/Gaussian kernel matrix.
 pub fn gaussian<'a>(arr: &'a ArrayView2<'a, f64>, gamma: f64) -> impl Kernel + 'a {
     let data = arr.outer_iter().collect();
