@@ -9,6 +9,8 @@ mod regression;
 pub use regression::Regression;
 mod lssvm;
 pub use lssvm::LSSVM;
+mod poisson;
+pub use poisson::Poisson;
 
 use crate::kernel::Kernel;
 use crate::status::Status;
