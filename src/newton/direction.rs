@@ -79,8 +79,10 @@ pub fn newton_with_fallback(
     let sums = &status_ext.sums;
     let rhs_b = sums.a - sums.da_zeros;
     if problem.has_max_asum() {
+        // solve system with two additional constraints
         let rhs_c = sums.sa - problem.max_asum() - sums.sda_zeros;
         let mat_inv_signs = mat_fact.solve(&signs).unwrap();
+        // create and solve 2x2 system
         let q00 = mat_inv_one.sum();
         let q01 = mat_inv_signs.sum();
         let q11 = mat_inv_signs.dot(&signs);
@@ -96,6 +98,7 @@ pub fn newton_with_fallback(
             status_ext.dir.a[i] = da_nonzero[idx_i];
         }
     } else {
+        // solve system with one additional constraints
         let db = (mat_inv_rhs.sum() - rhs_b) / mat_inv_one.sum();
         status_ext.dir.b = db;
         let da_nonzero = mat_inv_rhs - db * mat_inv_one;
