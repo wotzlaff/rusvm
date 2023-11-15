@@ -1,6 +1,6 @@
 use super::status_extended::StatusExtended;
 use crate::kernel::Kernel;
-use crate::problem::Problem;
+use crate::problem::PrimalProblem;
 use ndarray::prelude::*;
 use ndarray_linalg::{FactorizeInto, Solve};
 
@@ -10,7 +10,11 @@ pub enum DirectionType {
     NoStep,
 }
 
-pub fn gradient(problem: &dyn Problem, _kernel: &mut dyn Kernel, status_ext: &mut StatusExtended) {
+pub fn gradient(
+    problem: &dyn PrimalProblem,
+    _kernel: &mut dyn Kernel,
+    status_ext: &mut StatusExtended,
+) {
     for i in 0..problem.size() {
         status_ext.dir.a[i] = status_ext.status.a[i] + status_ext.status.g[i];
     }
@@ -18,7 +22,7 @@ pub fn gradient(problem: &dyn Problem, _kernel: &mut dyn Kernel, status_ext: &mu
 }
 
 fn compute_matrix_and_rhs(
-    problem: &dyn Problem,
+    problem: &dyn PrimalProblem,
     kernel: &mut dyn Kernel,
     status_ext: &mut StatusExtended,
 ) -> (Array2<f64>, Array1<f64>) {
@@ -46,7 +50,7 @@ fn compute_matrix_and_rhs(
 }
 
 pub fn newton_with_fallback(
-    problem: &dyn Problem,
+    problem: &dyn PrimalProblem,
     kernel: &mut dyn Kernel,
     status_ext: &mut StatusExtended,
 ) -> DirectionType {

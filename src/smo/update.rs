@@ -1,9 +1,9 @@
 use crate::kernel::Kernel;
-use crate::problem::Problem;
+use crate::problem::DualProblem;
 use crate::status::Status;
 
 pub fn update(
-    problem: &dyn Problem,
+    problem: &dyn DualProblem,
     kernel: &mut dyn Kernel,
     idx_i: usize,
     idx_j: usize,

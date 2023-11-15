@@ -56,6 +56,7 @@ where
     }
 
     fn use_rows(&mut self, idxs: &[usize], active_set: &[usize], fun: &mut dyn FnMut(Vec<&[f64]>)) {
+        assert!(idxs.len() <= self.cache.cap(), "cache size too small");
         let poss: Vec<_> = idxs
             .iter()
             .map(|&idx| match self.cache.get(&idx) {

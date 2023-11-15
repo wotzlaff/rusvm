@@ -1,7 +1,6 @@
 /// LS-SVM problem
 pub struct LSSVM<'a> {
     y: &'a [f64],
-    w: Option<&'a [f64]>,
     /// Parameters of the training problem
     pub params: super::Params,
 }
@@ -12,59 +11,56 @@ impl<'a> LSSVM<'a> {
     /// * `y`: slice of labels
     /// * `params`: struct of problem parameters
     pub fn new(y: &[f64], params: super::Params) -> LSSVM {
-        LSSVM { y, w: None, params }
-    }
-
-    fn weight(&self, i: usize) -> f64 {
-        match self.w {
-            Some(w) => w[i],
-            None => 1.0,
-        }
-    }
-
-    /// Sets the weights of the individual samples.
-    pub fn with_weights(mut self, w: &'a [f64]) -> Self {
-        self.w = Some(w);
-        self
+        LSSVM { y, params }
     }
 }
 
-impl<'a> super::Problem for LSSVM<'a> {
+impl super::base::ProblemBase for LSSVM<'_> {
     fn size(&self) -> usize {
         self.y.len()
     }
+    fn params(&self) -> &super::Params {
+        &self.params
+    }
+}
+
+impl super::shrinking::ShrinkingBase for LSSVM<'_> {
     fn lb(&self, _i: usize) -> f64 {
         f64::NEG_INFINITY
     }
     fn ub(&self, _i: usize) -> f64 {
         f64::INFINITY
     }
-    fn sign(&self, _i: usize) -> f64 {
-        0.0
-    }
+}
 
-    fn params(&self) -> &super::Params {
-        &self.params
+impl super::base::LabelProblem for LSSVM<'_> {
+    type T = f64;
+    fn label(&self, i: usize) -> f64 {
+        self.y[i]
     }
+}
 
-    fn dual_loss(&self, i: usize, ai: f64) -> f64 {
-        -ai * (self.y[i] - 0.5 * ai / self.weight(i))
+impl super::PrimalLabelProblem for LSSVM<'_> {
+    fn label_loss(&self, _i: usize, ti: f64, yi: f64) -> f64 {
+        let di = ti - yi;
+        0.5 * di * di
     }
-    fn d_dual_loss(&self, i: usize, ai: f64) -> f64 {
-        ai / self.weight(i) - self.y[i]
+    fn d_label_loss(&self, _i: usize, ti: f64, yi: f64) -> f64 {
+        ti - yi
     }
-    fn d2_dual_loss(&self, i: usize, _ai: f64) -> f64 {
-        1.0 / self.weight(i)
+    fn d2_label_loss(&self, _i: usize, _ti: f64, _yi: f64) -> f64 {
+        1.0
     }
-    fn loss(&self, i: usize, ti: f64) -> f64 {
-        let di = ti - self.y[i];
-        0.5 * self.weight(i) * di * di
+}
+
+impl super::DualLabelProblem for LSSVM<'_> {
+    fn label_dloss(&self, _i: usize, ai: f64, yi: f64) -> f64 {
+        -ai * (yi - 0.5 * ai)
     }
-    fn d_loss(&self, i: usize, ti: f64) -> f64 {
-        let di = ti - self.y[i];
-        self.weight(i) * di
+    fn d_label_dloss(&self, _i: usize, ai: f64, yi: f64) -> f64 {
+        ai - yi
     }
-    fn d2_loss(&self, _i: usize, _ti: f64) -> f64 {
+    fn d2_label_dloss(&self, _i: usize, _ai: f64, _yi: f64) -> f64 {
         1.0
     }
 }

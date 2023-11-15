@@ -3,7 +3,6 @@ use crate::max::poly2;
 /// Basic SVM (hinge loss) classification problem
 pub struct Classification<'a> {
     y: &'a [f64],
-    w: Option<&'a [f64]>,
     /// Parameters of the training problem
     pub params: super::Params,
     /// Value of shift in the loss function: The typical value is `1`.
@@ -18,25 +17,10 @@ impl<'a> Classification<'a> {
     pub fn new(y: &[f64], params: super::Params) -> Classification {
         Classification {
             y,
-            w: None,
             params,
             shift: 1.0,
         }
     }
-
-    fn weight(&self, i: usize) -> f64 {
-        match self.w {
-            Some(w) => w[i],
-            None => 1.0,
-        }
-    }
-
-    /// Sets the weights of the individual samples.
-    pub fn with_weights(mut self, w: &'a [f64]) -> Self {
-        self.w = Some(w);
-        self
-    }
-
     /// Sets the value of the shift in the loss function.
     pub fn with_shift(mut self, shift: f64) -> Self {
         self.shift = shift;
@@ -44,60 +28,63 @@ impl<'a> Classification<'a> {
     }
 }
 
-impl<'a> super::Problem for Classification<'a> {
+impl super::base::ProblemBase for Classification<'_> {
     fn size(&self) -> usize {
         self.y.len()
     }
+    fn sign(&self, i: usize) -> f64 {
+        self.y[i]
+    }
+    fn params(&self) -> &super::Params {
+        &self.params
+    }
+}
+
+impl super::shrinking::ShrinkingBase for Classification<'_> {
     fn lb(&self, i: usize) -> f64 {
         if self.y[i] > 0.0 {
             0.0
         } else {
-            -self.weight(i)
+            -1.0
         }
     }
     fn ub(&self, i: usize) -> f64 {
         if self.y[i] > 0.0 {
-            self.weight(i)
+            1.0
         } else {
             0.0
         }
     }
-    fn sign(&self, i: usize) -> f64 {
-        if self.y[i] > 0.0 {
-            1.0
-        } else {
-            -1.0
-        }
-    }
+}
 
-    fn params(&self) -> &super::Params {
-        &self.params
+impl super::base::LabelProblem for Classification<'_> {
+    type T = f64;
+    fn label(&self, i: usize) -> f64 {
+        self.y[i]
     }
+}
 
-    fn dual_loss(&self, i: usize, ai: f64) -> f64 {
-        let wi = self.weight(i);
-        let ya = self.y[i] * ai;
-        wi * poly2::dual_max(ya / wi, self.params.smoothing) - self.shift * ya
+impl super::PrimalLabelProblem for Classification<'_> {
+    fn label_loss(&self, _i: usize, ti: f64, yi: f64) -> f64 {
+        poly2::max(self.shift - yi * ti, self.params.smoothing)
     }
-    fn d_dual_loss(&self, i: usize, ai: f64) -> f64 {
-        let wi = self.weight(i);
-        let yi = self.y[i];
-        yi * (poly2::d_dual_max(yi * ai / wi, self.params.smoothing) - self.shift)
+    fn d_label_loss(&self, _i: usize, ti: f64, yi: f64) -> f64 {
+        -yi * poly2::d_max(self.shift - yi * ti, self.params.smoothing)
     }
-    fn d2_dual_loss(&self, i: usize, ai: f64) -> f64 {
-        let wi = self.weight(i);
-        let yi = self.y[i];
-        poly2::d2_dual_max(yi * ai / wi, self.params.smoothing) / wi
+    fn d2_label_loss(&self, _i: usize, ti: f64, yi: f64) -> f64 {
+        poly2::d2_max(self.shift - yi * ti, self.params.smoothing)
     }
-    fn loss(&self, i: usize, ti: f64) -> f64 {
-        self.weight(i) * poly2::max(self.shift - self.y[i] * ti, self.params.smoothing)
+}
+
+impl super::DualLabelProblem for Classification<'_> {
+    fn label_dloss(&self, _i: usize, ai: f64, yi: f64) -> f64 {
+        let ya = yi * ai;
+        poly2::dual_max(ya, self.params.smoothing) - self.shift * ya
     }
-    fn d_loss(&self, i: usize, ti: f64) -> f64 {
-        -self.y[i]
-            * self.weight(i)
-            * poly2::d_max(self.shift - self.y[i] * ti, self.params.smoothing)
+    fn d_label_dloss(&self, _i: usize, ai: f64, yi: f64) -> f64 {
+        yi * (poly2::d_dual_max(yi * ai, self.params.smoothing) - self.shift)
     }
-    fn d2_loss(&self, i: usize, ti: f64) -> f64 {
-        self.weight(i) * poly2::d2_max(self.shift - self.y[i] * ti, self.params.smoothing)
+    fn d2_label_dloss(&self, _i: usize, ai: f64, yi: f64) -> f64 {
+        poly2::d2_dual_max(yi * ai, self.params.smoothing)
     }
 }

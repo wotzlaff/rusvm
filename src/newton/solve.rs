@@ -4,12 +4,12 @@ use super::params::Params;
 use super::status_extended::{ActiveSet, Direction, StatusExtended, Sums};
 use crate::kernel::Kernel;
 use crate::newton::direction::DirectionType;
-use crate::problem::Problem;
+use crate::problem::PrimalProblem;
 use crate::status::{Status, StatusCode};
 
 /// Uses a version of Newton's method to solve the given training problem starting from the default initial point.
 pub fn solve(
-    problem: &dyn Problem,
+    problem: &dyn PrimalProblem,
     kernel: &mut dyn Kernel,
     params: &Params,
     callback: Option<&dyn Fn(&Status) -> bool>,
@@ -19,7 +19,7 @@ pub fn solve(
     solve_with_status(status, problem, kernel, params, callback)
 }
 
-fn compute_decisions(problem: &dyn Problem, status_ext: &mut StatusExtended) {
+fn compute_decisions(problem: &dyn PrimalProblem, status_ext: &mut StatusExtended) {
     let mut active = ActiveSet::new(problem.size());
     let mut sums = Sums::new();
     let mut violation = 0.0;
@@ -59,7 +59,7 @@ fn compute_decisions(problem: &dyn Problem, status_ext: &mut StatusExtended) {
 }
 
 fn update_status(
-    problem: &dyn Problem,
+    problem: &dyn PrimalProblem,
     kernel: &dyn Kernel,
     status_ext: &mut StatusExtended,
     stepsize: f64,
@@ -92,13 +92,13 @@ fn update_status(
             }
         }
     }
-    let (obj1, _obj_dual) = problem.objective(&status_next);
+    let obj1 = problem.objective(&status_next);
     status_next.value = obj1;
     (pred_desc, status_next)
 }
 
 fn descent_step(
-    problem: &dyn Problem,
+    problem: &dyn PrimalProblem,
     kernel: &mut dyn Kernel,
     params: &Params,
     status_ext: &mut StatusExtended,
@@ -111,7 +111,7 @@ fn descent_step(
         super::direction::gradient(problem, kernel, status_ext);
         DirectionType::Gradient
     };
-    let (obj0, _obj_dual) = problem.objective(&status_ext.status);
+    let obj0 = problem.objective(&status_ext.status);
     let mut stepsize = 1.0;
     let mut backstep = 0;
     let desc = loop {
@@ -139,7 +139,7 @@ fn descent_step(
 /// Uses a version of Newton's method to solve the given training problem starting from a particular [`Status`].
 pub fn solve_with_status(
     status: Status,
-    problem: &dyn Problem,
+    problem: &dyn PrimalProblem,
     kernel: &mut dyn Kernel,
     params: &Params,
     callback: Option<&dyn Fn(&Status) -> bool>,
@@ -161,7 +161,7 @@ pub fn solve_with_status(
         ki: vec![0.0; n],
     };
 
-    let (obj_primal, _obj_dual) = problem.objective(&status);
+    let obj_primal = problem.objective(&status);
     status_ext.status.value = obj_primal;
     loop {
         // update steps and time

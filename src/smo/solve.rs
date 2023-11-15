@@ -1,5 +1,5 @@
 use crate::kernel::Kernel;
-use crate::problem::Problem;
+use crate::problem::DualProblem;
 use crate::status::{Status, StatusCode};
 use std::time::Instant;
 
@@ -9,7 +9,7 @@ use super::Params;
 
 /// Uses the SMO method to solve the given training problem starting from the default initial point.
 pub fn solve(
-    problem: &dyn Problem,
+    problem: &dyn DualProblem,
     kernel: &mut dyn Kernel,
     params: &Params,
     callback: Option<&dyn Fn(&Status) -> bool>,
@@ -22,7 +22,7 @@ pub fn solve(
 /// Uses the SMO method to solve the given training problem starting from a particular [`Status`].
 pub fn solve_with_status(
     status: Status,
-    problem: &dyn Problem,
+    problem: &dyn DualProblem,
     kernel: &mut dyn Kernel,
     params: &Params,
     callback: Option<&dyn Fn(&Status) -> bool>,
@@ -76,34 +76,16 @@ pub fn solve_with_status(
 
         // handle progress output
         if params.verbose > 0 && (step % params.verbose == 0 || optimal) {
-            if params.log_objective {
-                let (obj_primal, obj_dual) = problem.objective(&status);
-                let gap = obj_primal + obj_dual;
-                println!(
-                    "{:10} {:10.2} {:10.6} {:10.6} {:10.6} {:10.6} {:10.6} {:8.3} {:8} / {}",
-                    step,
-                    elapsed,
-                    status.violation,
-                    gap,
-                    obj_primal,
-                    -obj_dual,
-                    status.value,
-                    status.asum,
-                    active_set.len(),
-                    problem.size()
-                )
-            } else {
-                println!(
-                    "{:10} {:10.2} {:10.6} {:10.6} {:8.3} {:8} / {}",
-                    step,
-                    elapsed,
-                    status.violation,
-                    status.value,
-                    status.asum,
-                    active_set.len(),
-                    problem.size()
-                )
-            }
+            println!(
+                "{:10} {:10.2} {:10.6} {:10.6} {:8.3} {:8} / {}",
+                step,
+                elapsed,
+                status.violation,
+                status.value,
+                status.asum,
+                active_set.len(),
+                problem.size()
+            )
         }
 
         // unshrink if necessary

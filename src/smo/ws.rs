@@ -1,9 +1,9 @@
 use crate::kernel::Kernel;
-use crate::problem::Problem;
+use crate::problem::DualProblem;
 use crate::status::Status;
 
 fn find_mvp_signed(
-    problem: &dyn Problem,
+    problem: &dyn DualProblem,
     status: &mut Status,
     active_set: &Vec<usize>,
     sign: f64,
@@ -30,7 +30,7 @@ fn find_mvp_signed(
 }
 
 pub fn find_mvp(
-    problem: &dyn Problem,
+    problem: &dyn DualProblem,
     status: &mut Status,
     active_set: &Vec<usize>,
 ) -> (usize, usize) {
@@ -60,7 +60,7 @@ fn descent(q: f64, p: f64, t_max: f64, lmbda: f64, regularization: f64) -> f64 {
 }
 
 pub fn find_ws2(
-    problem: &dyn Problem,
+    problem: &dyn DualProblem,
     kernel: &mut dyn Kernel,
     idx_i0: usize,
     idx_j1: usize,
