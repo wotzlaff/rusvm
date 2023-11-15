@@ -20,5 +20,6 @@ pub use lssvm::LSSVM;
 mod poisson;
 pub use poisson::Poisson;
 
+/// Combination of primal and dual training problem
 pub trait Problem: PrimalProblem + DualProblem {}
 impl<P> Problem for P where P: PrimalProblem + DualProblem {}

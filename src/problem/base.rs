@@ -41,7 +41,7 @@ pub trait ProblemBase {
         self.lambda() * status.violation < tol
     }
 
-    /// Recompute the product of kernel matrix and coefficient vector
+    /// Recomputes the product of kernel matrix and coefficient vector.
     fn recompute_kernel_product(
         &self,
         kernel: &mut dyn Kernel,
@@ -65,7 +65,10 @@ pub trait ProblemBase {
     }
 }
 
+/// Training problem providing labels for each sample
 pub trait LabelProblem: ProblemBase {
+    /// Type of the labels
     type T;
+    /// Gets the label of the ith sample.
     fn label(&self, i: usize) -> Self::T;
 }
