@@ -11,6 +11,10 @@ impl<'a> Poisson<'a> {
     /// * `y`: slice of labels
     /// * `params`: struct of problem parameters
     pub fn new(y: &[f64], params: super::Params) -> Poisson {
+        assert!(
+            y.iter().all(|&yi| yi >= 0.0),
+            "labels should be non-negative"
+        );
         Poisson { y, params }
     }
 }

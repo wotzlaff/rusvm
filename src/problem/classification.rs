@@ -15,6 +15,10 @@ impl<'a> Classification<'a> {
     /// * `y`: slice of labels with values `-1.0` or `+1.0`
     /// * `params`: struct of problem parameters
     pub fn new(y: &[f64], params: super::Params) -> Classification {
+        assert!(
+            y.iter().all(|&yi| yi == 1.0 || yi == -1.0),
+            "labels should be -1 or +1"
+        );
         Classification {
             y,
             params,
