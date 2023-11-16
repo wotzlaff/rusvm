@@ -25,6 +25,10 @@ pub trait DualProblem: ProblemBase + ShrinkingBase {
     fn quad(&self, status: &Status, i: usize) -> f64 {
         self.d2_dloss(i, status.a[i])
     }
+    /// Determines whether the problem is quadratic.
+    fn is_quad(&self) -> bool {
+        false
+    }
 
     /// Computes the ith dual loss function.
     fn dloss(&self, i: usize, ai: f64) -> f64;
@@ -42,22 +46,26 @@ pub trait DualLabelProblem: super::base::LabelProblem {
     fn d_label_dloss(&self, i: usize, ai: f64, yi: Self::T) -> f64;
     /// Computes the second derivative of the dual loss function with label yi.
     fn d2_label_dloss(&self, i: usize, ai: f64, yi: Self::T) -> f64;
+    /// Determines whether the dual loss function is quadratic.
+    fn is_quad(&self) -> bool {
+        false
+    }
 }
 
 impl<P> DualProblem for P
 where
     P: DualLabelProblem + ShrinkingBase,
 {
-    /// Computes the ith dual loss function.
     fn dloss(&self, i: usize, ai: f64) -> f64 {
         self.label_dloss(i, ai, self.label(i))
     }
-    /// Computes the first derivative of the ith dual loss function.
     fn d_dloss(&self, i: usize, ai: f64) -> f64 {
         self.d_label_dloss(i, ai, self.label(i))
     }
-    /// Computes the second derivative of the ith dual loss function.
     fn d2_dloss(&self, i: usize, ai: f64) -> f64 {
         self.d2_label_dloss(i, ai, self.label(i))
+    }
+    fn is_quad(&self) -> bool {
+        self.is_quad()
     }
 }

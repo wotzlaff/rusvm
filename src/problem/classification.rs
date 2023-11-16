@@ -87,4 +87,7 @@ impl super::DualLabelProblem for Classification<'_> {
     fn d2_label_dloss(&self, _i: usize, ai: f64, yi: f64) -> f64 {
         poly2::d2_dual_max(yi * ai, self.params.smoothing)
     }
+    fn is_quad(&self) -> bool {
+        true
+    }
 }

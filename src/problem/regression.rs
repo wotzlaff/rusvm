@@ -101,4 +101,7 @@ impl super::DualLabelProblem for Regression<'_> {
         let si = self.sign(i);
         poly2::d2_dual_max(ai * si, self.params.smoothing)
     }
+    fn is_quad(&self) -> bool {
+        true
+    }
 }

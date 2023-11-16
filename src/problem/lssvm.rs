@@ -63,4 +63,7 @@ impl super::DualLabelProblem for LSSVM<'_> {
     fn d2_label_dloss(&self, _i: usize, _ai: f64, _yi: f64) -> f64 {
         1.0
     }
+    fn is_quad(&self) -> bool {
+        true
+    }
 }
