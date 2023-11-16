@@ -55,7 +55,7 @@ impl super::PrimalLabelProblem for LSSVM<'_> {
 
 impl super::DualLabelProblem for LSSVM<'_> {
     fn label_dloss(&self, _i: usize, ai: f64, yi: f64) -> f64 {
-        -ai * (yi - 0.5 * ai)
+        ai * (0.5 * ai - yi)
     }
     fn d_label_dloss(&self, _i: usize, ai: f64, yi: f64) -> f64 {
         ai - yi
