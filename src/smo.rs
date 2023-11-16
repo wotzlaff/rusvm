@@ -1,5 +1,6 @@
 //! Sequential Minimal Optimization
 
+mod newton;
 mod params;
 mod update;
 mod ws;
