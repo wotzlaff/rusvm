@@ -15,7 +15,10 @@ pub fn solve(
     callback: Option<&dyn Fn(&Status) -> bool>,
 ) -> Status {
     let n = problem.size();
-    let status = Status::new(n);
+    let mut status = Status::new(n);
+    for k in 0..n {
+        status.value -= problem.dloss(k, 0.0);
+    }
     solve_with_status(status, problem, kernel, params, callback)
 }
 
@@ -34,6 +37,20 @@ pub fn solve_with_status(
 
     let mut step: usize = 0;
     let mut stop = false;
+
+    if params.verbose > 0 {
+        if params.log_objective {
+            println!(
+                "{:>10} {:>10} {:>10} {:>10} {:>10} {:>8} {:>8} / {}",
+                "step", "time", "violation", "obj(inc)", "obj(comp)", "|a|", "|active|", "size",
+            )
+        } else {
+            println!(
+                "{:>10} {:>10} {:>10} {:>10} {:>8} {:>8} / {}",
+                "step", "time", "violation", "obj(inc)", "|a|", "|active|", "size",
+            )
+        }
+    }
 
     loop {
         // update steps and time
