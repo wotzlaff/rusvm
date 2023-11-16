@@ -19,33 +19,29 @@ fn compute_step(problem: &dyn DualProblem, sprob: SubProblem, status: &Status) -
     let (i, j) = sprob.ij;
     let ai = status.a[i];
     let aj = status.a[j];
-    let pij: f64 = sprob.p0 + problem.d_dloss(i, ai) - problem.d_dloss(j, aj);
-    let qij = sprob.q0 + problem.d2_dloss(i, ai) + problem.d2_dloss(j, aj);
-    let t: f64 = if problem.is_quad() {
-        f64::min(pij / f64::max(qij, problem.regularization()), sprob.max_t)
+    if problem.is_quad() {
+        let p = sprob.p0 + problem.d_dloss(i, ai) - problem.d_dloss(j, aj);
+        let q = sprob.q0 + problem.d2_dloss(i, ai) + problem.d2_dloss(j, aj);
+        let t = f64::min(p / f64::max(q, problem.regularization()), sprob.max_t);
+        let dvalue = t * (0.5 * q * t - p);
+        Step { t, dvalue }
     } else {
-        newton(
+        let loss = problem.dloss(i, ai) + problem.dloss(j, aj);
+        let (t, dvalue) = newton(
             &|t| {
-                let v = t * (0.5 * sprob.q0 * t - sprob.p0)
-                    + (problem.dloss(i, ai - t) - problem.dloss(i, ai))
-                    + (problem.dloss(j, aj + t) - problem.dloss(j, aj));
+                let v = t * (0.5 * sprob.q0 * t - sprob.p0) - loss
+                    + problem.dloss(i, ai - t)
+                    + problem.dloss(j, aj + t);
                 let dv = sprob.q0 * t - sprob.p0 - problem.d_dloss(i, ai - t)
                     + problem.d_dloss(j, aj + t);
-                let ddv = sprob.q0 + problem.d2_dloss(i, ai - t) + problem.d2_dloss(j, aj + t);
+                let ddv: f64 = sprob.q0 + problem.d2_dloss(i, ai - t) + problem.d2_dloss(j, aj + t);
                 (v, f64::max(dv, -1e3), f64::min(ddv, 1e6))
             },
             0.0,
             sprob.max_t,
-        )
-    };
-    let dvalue = if problem.is_quad() {
-        t * (0.5 * qij * t - pij)
-    } else {
-        t * (0.5 * sprob.q0 * t - sprob.p0)
-            + (problem.dloss(i, ai - t) - problem.dloss(i, ai))
-            + (problem.dloss(j, aj + t) - problem.dloss(j, aj))
-    };
-    Step { t, dvalue }
+        );
+        Step { t, dvalue }
+    }
 }
 
 pub fn update(
@@ -61,7 +57,21 @@ pub fn update(
     kernel.use_rows([i, j].as_slice(), &active_set, &mut |kij: Vec<&[f64]>| {
         let ki = kij[0];
         let kj = kij[1];
-        let max_tij = f64::min(status.a[i] - problem.lb(i), problem.ub(j) - status.a[j]);
+        let mut max_tij = f64::min(status.a[i] - problem.lb(i), problem.ub(j) - status.a[j]);
+
+        let max_t_asum = 0.5 * (problem.max_asum() - status.asum);
+        let update_asum = if problem.has_max_asum() {
+            if problem.sign(i) != problem.sign(j) {
+                if max_tij > max_t_asum {
+                    max_tij = max_t_asum;
+                }
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        };
         let step = compute_step(
             problem,
             SubProblem {
@@ -73,11 +83,9 @@ pub fn update(
             &status,
         );
 
-        let mut t = step.t;
-        if problem.sign(i) != problem.sign(j) {
-            let rem_asum = problem.max_asum() - status.asum;
-            if problem.sign(i) < 0.0 && 0.5 * rem_asum <= max_tij {
-                t = 0.5 * rem_asum;
+        let t = step.t;
+        if update_asum {
+            if t == max_t_asum {
                 status.asum = problem.max_asum();
             } else {
                 status.asum -= 2.0 * t * problem.sign(i);

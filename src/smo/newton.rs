@@ -1,4 +1,4 @@
-pub fn newton(f: &dyn Fn(f64) -> (f64, f64, f64), x0: f64, xmax: f64) -> f64 {
+pub fn newton(f: &dyn Fn(f64) -> (f64, f64, f64), x0: f64, xmax: f64) -> (f64, f64) {
     let mut x = x0;
     let (mut v, mut dv, mut ddv) = f(x);
     for step in 0..5 {
@@ -26,5 +26,5 @@ pub fn newton(f: &dyn Fn(f64) -> (f64, f64, f64), x0: f64, xmax: f64) -> f64 {
             assert!(backstep <= 20);
         }
     }
-    x
+    (x, v)
 }
