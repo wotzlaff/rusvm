@@ -1,3 +1,4 @@
+use super::subproblem::{compute_step, Subproblem};
 use crate::kernel::Kernel;
 use crate::problem::DualProblem;
 use crate::status::Status;
@@ -54,11 +55,6 @@ pub fn find_mvp(
     (idx_i, idx_j)
 }
 
-fn descent(q: f64, p: f64, t_max: f64, lmbda: f64, regularization: f64) -> f64 {
-    let t = f64::min(lmbda * p / f64::max(q, regularization), t_max);
-    t * (p - 0.5 / lmbda * q * t)
-}
-
 pub fn find_ws2(
     problem: &dyn DualProblem,
     kernel: &mut dyn Kernel,
@@ -96,38 +92,38 @@ pub fn find_ws2(
             let pi0r = gi0 - gr;
             let d_upr = problem.ub(r) - status.a[r];
             if d_upr > 0.0 && pi0r > 0.0 {
-                let qi0 = ki0i0 + krr - 2.0 * ki0[idx_r]
-                    + problem.lambda()
-                        * (problem.d2_dloss(i0, status.a[i0]) + problem.d2_dloss(r, status.a[r]));
-                let di0r = descent(
-                    qi0,
-                    pi0r,
-                    f64::min(max_ti0, d_upr),
-                    problem.lambda(),
-                    problem.regularization(),
+                let step = compute_step(
+                    problem,
+                    Subproblem {
+                        ij: (i0, r),
+                        max_t: f64::min(max_ti0, d_upr),
+                        q0: ki0i0 + krr - 2.0 * ki0[idx_r],
+                        p0: status.ka[i0] - status.ka[r],
+                    },
+                    status,
                 );
-                if di0r > max_d0 {
+                if step.dvalue > max_d0 {
                     idx_j0 = idx_r;
-                    max_d0 = di0r;
+                    max_d0 = step.dvalue;
                 }
             }
 
             let prj1 = gr - gj1;
             let d_dnr = status.a[r] - problem.lb(r);
             if d_dnr > 0.0 && prj1 > 0.0 {
-                let qj1 = kj1j1 + krr - 2.0 * kj1[idx_r]
-                    + problem.lambda()
-                        * (problem.d2_dloss(j1, status.a[j1]) + problem.d2_dloss(r, status.a[r]));
-                let drj1 = descent(
-                    qj1,
-                    prj1,
-                    f64::min(max_tj1, d_dnr),
-                    problem.lambda(),
-                    problem.regularization(),
+                let step = compute_step(
+                    problem,
+                    Subproblem {
+                        ij: (r, j1),
+                        max_t: f64::min(max_tj1, d_dnr),
+                        q0: kj1j1 + krr - 2.0 * kj1[idx_r],
+                        p0: status.ka[r] - status.ka[j1],
+                    },
+                    status,
                 );
-                if drj1 > max_d1 {
+                if step.dvalue > max_d1 {
                     idx_i1 = idx_r;
-                    max_d1 = drj1;
+                    max_d1 = step.dvalue;
                 }
             }
         }

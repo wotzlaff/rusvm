@@ -1,48 +1,7 @@
-use super::newton::newton;
+use super::subproblem::{compute_step, Subproblem};
 use crate::kernel::Kernel;
 use crate::problem::DualProblem;
 use crate::status::Status;
-
-struct Step {
-    t: f64,
-    dvalue: f64,
-}
-
-struct SubProblem {
-    ij: (usize, usize),
-    max_t: f64,
-    q0: f64,
-    p0: f64,
-}
-
-fn compute_step(problem: &dyn DualProblem, sprob: SubProblem, status: &Status) -> Step {
-    let (i, j) = sprob.ij;
-    let ai = status.a[i];
-    let aj = status.a[j];
-    if problem.is_quad() {
-        let p = sprob.p0 + problem.d_dloss(i, ai) - problem.d_dloss(j, aj);
-        let q = sprob.q0 + problem.d2_dloss(i, ai) + problem.d2_dloss(j, aj);
-        let t = f64::min(p / f64::max(q, problem.regularization()), sprob.max_t);
-        let dvalue = t * (0.5 * q * t - p);
-        Step { t, dvalue }
-    } else {
-        let loss = problem.dloss(i, ai) + problem.dloss(j, aj);
-        let (t, dvalue) = newton(
-            &|t| {
-                let v = t * (0.5 * sprob.q0 * t - sprob.p0) - loss
-                    + problem.dloss(i, ai - t)
-                    + problem.dloss(j, aj + t);
-                let dv = sprob.q0 * t - sprob.p0 - problem.d_dloss(i, ai - t)
-                    + problem.d_dloss(j, aj + t);
-                let ddv: f64 = sprob.q0 + problem.d2_dloss(i, ai - t) + problem.d2_dloss(j, aj + t);
-                (v, f64::max(dv, -1e3), f64::min(ddv, 1e6))
-            },
-            0.0,
-            sprob.max_t,
-        );
-        Step { t, dvalue }
-    }
-}
 
 pub fn update(
     problem: &dyn DualProblem,
@@ -74,7 +33,7 @@ pub fn update(
         };
         let step = compute_step(
             problem,
-            SubProblem {
+            Subproblem {
                 ij: (i, j),
                 max_t: max_tij,
                 q0: (ki[idx_i] + kj[idx_j] - 2.0 * ki[idx_j]) / problem.lambda(),
