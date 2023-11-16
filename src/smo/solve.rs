@@ -76,16 +76,31 @@ pub fn solve_with_status(
 
         // handle progress output
         if params.verbose > 0 && (step % params.verbose == 0 || optimal) {
-            println!(
-                "{:10} {:10.2} {:10.6} {:10.6} {:8.3} {:8} / {}",
-                step,
-                elapsed,
-                status.violation,
-                status.value,
-                status.asum,
-                active_set.len(),
-                problem.size()
-            )
+            if params.log_objective {
+                let obj = problem.objective(&status);
+                println!(
+                    "{:10} {:10.2} {:10.6} {:10.6} {:10.6} {:8.3} {:8} / {}",
+                    step,
+                    elapsed,
+                    status.violation,
+                    status.value,
+                    -obj,
+                    status.asum,
+                    active_set.len(),
+                    problem.size()
+                )
+            } else {
+                println!(
+                    "{:10} {:10.2} {:10.6} {:10.6} {:8.3} {:8} / {}",
+                    step,
+                    elapsed,
+                    status.violation,
+                    status.value,
+                    status.asum,
+                    active_set.len(),
+                    problem.size()
+                )
+            }
         }
 
         // unshrink if necessary
