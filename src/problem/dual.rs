@@ -17,14 +17,6 @@ pub trait DualProblem: ProblemBase + ShrinkingBase {
         }
         0.5 * reg + loss_dual
     }
-    /// Computes the ith component gradient of the dual objective function.
-    fn grad(&self, status: &Status, i: usize) -> f64 {
-        status.ka[i] + self.d_dloss(i, status.a[i])
-    }
-    /// Computes the second derivative of the ith loss function.
-    fn quad(&self, status: &Status, i: usize) -> f64 {
-        self.d2_dloss(i, status.a[i])
-    }
     /// Determines whether the problem is quadratic.
     fn is_quad(&self) -> bool {
         false

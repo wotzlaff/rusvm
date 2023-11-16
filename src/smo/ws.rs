@@ -13,7 +13,7 @@ fn find_mvp_signed(
     let mut idx_i: usize = 0;
     let mut idx_j: usize = 0;
     for (idx, &i) in active_set.iter().enumerate() {
-        let g_i = problem.grad(status, i);
+        let g_i = status.ka[i] + problem.d_dloss(i, status.a[i]);
         status.g[i] = g_i;
         if problem.sign(i) * sign >= 0.0 {
             if status.a[i] > problem.lb(i) && g_i > g_max {
@@ -97,7 +97,8 @@ pub fn find_ws2(
             let d_upr = problem.ub(r) - status.a[r];
             if d_upr > 0.0 && pi0r > 0.0 {
                 let qi0 = ki0i0 + krr - 2.0 * ki0[idx_r]
-                    + problem.lambda() * (problem.quad(status, i0) + problem.quad(status, r));
+                    + problem.lambda()
+                        * (problem.d2_dloss(i0, status.a[i0]) + problem.d2_dloss(r, status.a[r]));
                 let di0r = descent(
                     qi0,
                     pi0r,
@@ -115,7 +116,8 @@ pub fn find_ws2(
             let d_dnr = status.a[r] - problem.lb(r);
             if d_dnr > 0.0 && prj1 > 0.0 {
                 let qj1 = kj1j1 + krr - 2.0 * kj1[idx_r]
-                    + problem.lambda() * (problem.quad(status, j1) + problem.quad(status, r));
+                    + problem.lambda()
+                        * (problem.d2_dloss(j1, status.a[j1]) + problem.d2_dloss(r, status.a[r]));
                 let drj1 = descent(
                     qj1,
                     prj1,

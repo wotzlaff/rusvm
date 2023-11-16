@@ -18,12 +18,17 @@ pub fn update(
         let kj = kij[1];
         let pij = status.g[i] - status.g[j];
         let qij = ki[idx_i] + kj[idx_j] - 2.0 * ki[idx_j]
-            + problem.lambda() * (problem.quad(status, i) + problem.quad(status, j));
+            + problem.lambda()
+                * (problem.d2_dloss(i, status.a[i]) + problem.d2_dloss(j, status.a[j]));
         let max_tij = f64::min(status.a[i] - problem.lb(i), problem.ub(j) - status.a[j]);
-        let mut tij: f64 = f64::min(
-            problem.lambda() * pij / f64::max(qij, problem.regularization()),
-            max_tij,
-        );
+        let mut tij: f64 = if problem.is_quad() {
+            f64::min(
+                problem.lambda() * pij / f64::max(qij, problem.regularization()),
+                max_tij,
+            )
+        } else {
+            0.0
+        };
         if problem.sign(i) != problem.sign(j) {
             let rem_asum = problem.max_asum() - status.asum;
             if problem.sign(i) < 0.0 && rem_asum <= 2.0 * max_tij {
