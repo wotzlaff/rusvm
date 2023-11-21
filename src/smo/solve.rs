@@ -37,6 +37,7 @@ pub fn solve_with_status(
 
     let mut step: usize = 0;
     let mut stop = false;
+    let mut last_ij = (0, 0);
 
     if params.verbose > 0 {
         if params.log_objective {
@@ -134,16 +135,24 @@ pub fn solve_with_status(
         }
 
         // determine working set
-        let (idx_i, idx_j) = if params.second_order {
+        last_ij = if params.second_order {
             let sign = if problem.has_max_asum() && status.asum == problem.max_asum() {
                 problem.sign(active_set[idx_i0])
             } else {
                 0.0
             };
-            find_ws2(problem, kernel, idx_i0, idx_j1, &status, &active_set, sign)
+            let (idx_i2, idx_j2) =
+                find_ws2(problem, kernel, idx_i0, idx_j1, &status, &active_set, sign);
+            if (idx_i2, idx_j2) != last_ij {
+                (idx_i2, idx_j2)
+            } else {
+                (idx_i0, idx_j1)
+            }
         } else {
             (idx_i0, idx_j1)
         };
+
+        let (idx_i, idx_j) = last_ij;
 
         // update selected variables
         update(problem, kernel, idx_i, idx_j, &mut status, &active_set);
