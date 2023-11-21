@@ -4,7 +4,7 @@ use crate::status::Status;
 pub fn newton(f: &dyn Fn(f64) -> (f64, f64, f64), x0: f64, xmax: f64) -> (f64, f64) {
     let mut x = x0;
     let (mut v, mut dv, mut ddv) = f(x);
-    for step in 0..5 {
+    for _step in 0..5 {
         let dx_unc = if f64::is_finite(dv) { -dv / ddv } else { 1.0 };
         let dx = f64::min(dx_unc, xmax - x);
         if dv.abs() < 1e-6 || (dx != dx_unc && dv < 0.0) {
