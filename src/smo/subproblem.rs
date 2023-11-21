@@ -5,7 +5,7 @@ pub fn newton(f: &dyn Fn(f64) -> (f64, f64, f64), x0: f64, xmax: f64) -> (f64, f
     let mut x = x0;
     let (mut v, mut dv, mut ddv) = f(x);
     for step in 0..5 {
-        let dx_unc = -dv / ddv;
+        let dx_unc = if f64::is_finite(dv) { -dv / ddv } else { 1.0 };
         let dx = f64::min(dx_unc, xmax - x);
         if dv.abs() < 1e-6 || (dx != dx_unc && dv < 0.0) {
             break;
@@ -32,11 +32,13 @@ pub fn newton(f: &dyn Fn(f64) -> (f64, f64, f64), x0: f64, xmax: f64) -> (f64, f
     (x, v)
 }
 
+#[derive(Debug)]
 pub struct Step {
     pub t: f64,
     pub dvalue: f64,
 }
 
+#[derive(Debug)]
 pub struct Subproblem {
     pub ij: (usize, usize),
     pub max_t: f64,
@@ -64,7 +66,7 @@ pub fn compute_step(problem: &dyn DualProblem, sprob: Subproblem, status: &Statu
                 let dv = sprob.q0 * t - sprob.p0 - problem.d_dloss(i, ai - t)
                     + problem.d_dloss(j, aj + t);
                 let ddv: f64 = sprob.q0 + problem.d2_dloss(i, ai - t) + problem.d2_dloss(j, aj + t);
-                (v, f64::max(dv, -1e3), f64::min(ddv, 1e6))
+                (v, dv, ddv)
             },
             0.0,
             sprob.max_t,
