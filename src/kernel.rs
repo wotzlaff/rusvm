@@ -6,7 +6,7 @@ mod precomputed;
 pub use precomputed::PrecomputedKernel;
 mod row;
 use ndarray::ArrayView2;
-pub use row::RowKernel;
+pub use row::{KernelFunction, RowKernel};
 
 /// An abstract kernel matrix
 pub trait Kernel {

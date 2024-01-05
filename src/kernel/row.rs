@@ -1,16 +1,19 @@
+pub type KernelFunction<T> = Box<dyn Fn(&T, &T) -> f64>;
+pub type DiagFunction<T> = Box<dyn Fn(&T) -> f64>;
+
 /// A struct containing data for the computation of a kernel matrix with kernel function.
 pub struct RowKernel<T> {
     data: Vec<T>,
-    kernel_function: Box<dyn Fn(&T, &T) -> f64>,
-    diag_function: Box<dyn Fn(&T) -> f64>,
+    kernel_function: KernelFunction<T>,
+    diag_function: DiagFunction<T>,
 }
 
 impl<T> RowKernel<T> {
     /// Creates a [`RowKernel`] for given feature matrix and kernel function.
     pub fn new(
         data: Vec<T>,
-        kernel_function: Box<dyn Fn(&T, &T) -> f64>,
-        diag_function: Box<dyn Fn(&T) -> f64>,
+        kernel_function: KernelFunction<T>,
+        diag_function: DiagFunction<T>,
     ) -> Self {
         RowKernel {
             data,
