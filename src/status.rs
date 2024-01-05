@@ -59,4 +59,24 @@ impl Status {
             time: 0.0,
         }
     }
+
+    /// Determine support vectors and reduce the training set
+    pub fn find_support<T: Copy>(&self, data: &Vec<T>) -> (Status, Vec<T>) {
+        let size_support: usize = self.a.iter().map(|&ai| if ai != 0.0 { 1 } else { 0 }).sum();
+        let mut new_status = Status::new(size_support);
+        let mut new_data = Vec::with_capacity(size_support);
+        let mut i = 0;
+        for (idx, (&ai, &xi)) in self.a.iter().zip(data).enumerate() {
+            if ai != 0.0 {
+                new_data.push(xi);
+                new_status.a[i] = self.a[idx];
+                new_status.ka[i] = self.ka[idx];
+                new_status.g[i] = self.g[idx];
+                i += 1;
+            }
+        }
+        new_status.b = self.b;
+        new_status.c = self.c;
+        (new_status, new_data)
+    }
 }
