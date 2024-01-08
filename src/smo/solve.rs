@@ -35,8 +35,6 @@ pub fn solve_with_status(
 
     #[cfg(not(feature = "no_time"))]
     let start = Instant::now();
-    #[cfg(feature = "no_time")]
-    let start = 0.0;
 
     let n = problem.size();
     let mut active_set = (0..n).collect();
