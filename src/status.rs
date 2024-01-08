@@ -68,9 +68,10 @@ impl Status {
         let mut new_status = Status::new(size_support);
         let mut new_data = Vec::with_capacity(size_support);
         let mut i = 0;
-        for (idx, (&ai, xi)) in self.a.iter().zip(data).enumerate() {
+        for (idx, &ai) in self.a.iter().enumerate() {
             if ai != 0.0 {
-                new_data.push(xi.clone());
+                let xi = data[idx % data.len()].clone();
+                new_data.push(xi);
                 new_status.a[i] = self.a[idx];
                 new_status.ka[i] = self.ka[idx];
                 new_status.g[i] = self.g[idx];
