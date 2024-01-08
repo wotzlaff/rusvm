@@ -1,7 +1,7 @@
 use crate::kernel::Kernel;
 use crate::problem::DualProblem;
 use crate::status::{Status, StatusCode};
-#[cfg(feature = "time")]
+#[cfg(not(feature = "no_time"))]
 use std::time::Instant;
 
 use super::update::update;
@@ -33,9 +33,9 @@ pub fn solve_with_status(
 ) -> Status {
     let mut status = status;
 
-    #[cfg(feature = "time")]
+    #[cfg(not(feature = "no_time"))]
     let start = Instant::now();
-    #[cfg(not(feature = "time"))]
+    #[cfg(feature = "no_time")]
     let start = 0.0;
 
     let n = problem.size();
@@ -62,9 +62,9 @@ pub fn solve_with_status(
     loop {
         // update steps and time
         status.steps = step;
-        #[cfg(feature = "time")]
+        #[cfg(not(feature = "no_time"))]
         let elapsed = start.elapsed().as_secs_f64();
-        #[cfg(not(feature = "time"))]
+        #[cfg(feature = "no_time")]
         let elapsed = 0.0;
 
         status.time = elapsed;

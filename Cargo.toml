@@ -16,6 +16,6 @@ caches = "0.2.6"
 serde = { version = "1.0", features = ["derive"] }
 
 [features]
-default = ["newton", "time"]
+default = ["newton"]
 newton = ["dep:ndarray-linalg"]
-time = []
+no_time = []
