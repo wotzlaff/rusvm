@@ -4,10 +4,12 @@
 
 pub mod kernel;
 mod max;
+#[cfg(feature = "newton")]
 pub mod newton;
 mod predict;
 pub mod problem;
 pub mod smo;
+#[cfg(feature = "newton")]
 pub mod smonewt;
 pub use crate::predict::predict;
 

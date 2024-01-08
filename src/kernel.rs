@@ -62,4 +62,19 @@ pub fn gaussian<'a>(arr: &'a ArrayView2<'a, f64>, gamma: f64) -> impl Kernel + '
     )
 }
 
+/// Builds a RBF/Gaussian kernel matrix.
+pub fn gaussian_from_vecs<'a>(data: Vec<&'a [f64]>, gamma: f64) -> impl Kernel + 'a {
+    RowKernel::new(
+        data,
+        Box::new(move |xi: &&'a [f64], xj: &&'a [f64]| {
+            let dij = xi
+                .iter()
+                .zip(xj.iter())
+                .fold(0.0, |acc, (xik, xjk)| acc + (xik - xjk).powi(2));
+            (-gamma * dij).exp()
+        }),
+        Box::new(move |&_xi| 1.0),
+    )
+}
+
 pub use gaussian as rbf;

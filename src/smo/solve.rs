@@ -1,6 +1,7 @@
 use crate::kernel::Kernel;
 use crate::problem::DualProblem;
 use crate::status::{Status, StatusCode};
+#[cfg(feature = "time")]
 use std::time::Instant;
 
 use super::update::update;
@@ -31,7 +32,12 @@ pub fn solve_with_status(
     callback: Option<&dyn Fn(&Status) -> bool>,
 ) -> Status {
     let mut status = status;
+
+    #[cfg(feature = "time")]
     let start = Instant::now();
+    #[cfg(not(feature = "time"))]
+    let start = 0.0;
+
     let n = problem.size();
     let mut active_set = (0..n).collect();
 
@@ -56,7 +62,11 @@ pub fn solve_with_status(
     loop {
         // update steps and time
         status.steps = step;
+        #[cfg(feature = "time")]
         let elapsed = start.elapsed().as_secs_f64();
+        #[cfg(not(feature = "time"))]
+        let elapsed = 0.0;
+
         status.time = elapsed;
 
         // handle step limit

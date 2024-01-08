@@ -10,6 +10,11 @@ repository = "https://github.com/wotzlaff/rusvm"
 keywords = ["smo", "svm", "machine-learning"]
 
 [dependencies]
-ndarray = "0.15.0"
-ndarray-linalg = { version = "0.16", features = ["intel-mkl-static"] }
+ndarray = "0.15"
+ndarray-linalg = { version = "0.16", features = ["intel-mkl-static"], optional = true }
 caches = "0.2.6"
+
+[features]
+default = ["newton", "time"]
+newton = ["dep:ndarray-linalg"]
+time = []
