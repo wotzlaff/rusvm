@@ -1,4 +1,6 @@
-#[derive(Clone, Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 /// Possible outcomes of an optimization routine
 pub enum StatusCode {
     /// Optimization not started
@@ -15,7 +17,7 @@ pub enum StatusCode {
     NoStepPossible,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 /// A struct containing information about the current point and state of the optimization routine
 pub struct Status {
     /// Vector of coefficients (typically called α in the literature)

@@ -814,6 +814,7 @@ dependencies = [
  "caches",
  "ndarray",
  "ndarray-linalg",
+ "serde",
 ]
 
 [[package]]
