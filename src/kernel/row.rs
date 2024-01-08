@@ -1,4 +1,6 @@
+/// Function type for kernel functions
 pub type KernelFunction<T> = Box<dyn Fn(&T, &T) -> f64>;
+/// Function type for diagonal entries of kernel functions
 pub type DiagFunction<T> = Box<dyn Fn(&T) -> f64>;
 
 /// A struct containing data for the computation of a kernel matrix with kernel function.
