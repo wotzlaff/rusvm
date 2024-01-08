@@ -48,10 +48,10 @@ pub fn find_mvp(
     } else {
         let (dij, sij, idx_i, idx_j) = find_mvp_signed(problem, status, active_set, 0.0);
         status.b = -0.5 * sij;
-        status.violation = dij;
+        status.opt_status.violation = dij;
         (dij, idx_i, idx_j)
     };
-    status.violation = dij;
+    status.opt_status.violation = dij;
     (idx_i, idx_j)
 }
 

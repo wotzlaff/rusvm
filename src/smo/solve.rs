@@ -59,30 +59,30 @@ pub fn solve_with_status(
 
     loop {
         // update steps and time
-        status.steps = step;
+        status.opt_status.steps = step;
         #[cfg(not(feature = "no_time"))]
         let elapsed = start.elapsed().as_secs_f64();
         #[cfg(feature = "no_time")]
         let elapsed = 0.0;
 
-        status.time = elapsed;
+        status.opt_status.time = elapsed;
 
         // handle step limit
         if step >= params.max_steps {
-            status.code = StatusCode::MaxSteps;
+            status.opt_status.code = StatusCode::MaxSteps;
             stop = true;
         }
 
         // handle time limit
         if params.time_limit > 0.0 && elapsed >= params.time_limit {
-            status.code = StatusCode::TimeLimit;
+            status.opt_status.code = StatusCode::TimeLimit;
             stop = true;
         }
 
         // handle callback
         if let Some(callback_fn) = callback {
             if callback_fn(&status) {
-                status.code = StatusCode::Callback;
+                status.opt_status.code = StatusCode::Callback;
                 stop = true;
             }
         };
@@ -96,7 +96,7 @@ pub fn solve_with_status(
         let (idx_i0, idx_j1) = find_mvp(problem, &mut status, &active_set);
         let optimal = problem.is_optimal(&status, params.tol);
         if optimal {
-            status.code = StatusCode::Optimal;
+            status.opt_status.code = StatusCode::Optimal;
             stop = true;
         }
 
@@ -108,7 +108,7 @@ pub fn solve_with_status(
                     "{:10} {:10.2} {:10.6} {:10.6} {:10.6} {:8.3} {:8} / {}",
                     step,
                     elapsed,
-                    status.violation,
+                    status.opt_status.violation,
                     status.value,
                     -obj,
                     status.asum,
@@ -120,7 +120,7 @@ pub fn solve_with_status(
                     "{:10} {:10.2} {:10.6} {:10.6} {:8.3} {:8} / {}",
                     step,
                     elapsed,
-                    status.violation,
+                    status.opt_status.violation,
                     status.value,
                     status.asum,
                     active_set.len(),

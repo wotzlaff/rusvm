@@ -19,6 +19,19 @@ pub enum StatusCode {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 /// A struct containing information about the current point and state of the optimization routine
+pub struct OptimizationStatus {
+    /// Violation of optimality conditions
+    pub violation: f64,
+    /// Current status
+    pub code: StatusCode,
+    /// Number of conducted steps
+    pub steps: usize,
+    /// Elapsed time (in seconds)
+    pub time: f64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+/// A struct containing information about the current point and state of the optimization routine
 pub struct Status {
     /// Vector of coefficients (typically called α in the literature)
     pub a: Vec<f64>,
@@ -28,37 +41,40 @@ pub struct Status {
     pub c: f64,
     /// 1-norm of the coefficient vector
     pub asum: f64,
-    /// Violation of optimality conditions
-    pub violation: f64,
     /// Objective function value
     pub value: f64,
     /// Helper vector containing product of kernel matrix with coeffient vector (scaled by λ⁻¹)
     pub ka: Vec<f64>,
     /// Helper vector containing values of first-order derivatives
     pub g: Vec<f64>,
-    /// Current status
-    pub code: StatusCode,
-    /// Number of conducted steps
-    pub steps: usize,
-    /// Elapsed time (in seconds)
-    pub time: f64,
+    /// Optimization status
+    pub opt_status: OptimizationStatus,
+}
+
+impl OptimizationStatus {
+    /// Create a [`OptimizationStatus`] struct with default initialization
+    pub fn new() -> Self {
+        Self {
+            violation: f64::INFINITY,
+            code: StatusCode::Initialized,
+            steps: 0,
+            time: 0.0,
+        }
+    }
 }
 
 impl Status {
     /// Create a [`Status`] struct with default initialization for `n` samples
-    pub fn new(n: usize) -> Status {
-        Status {
+    pub fn new(n: usize) -> Self {
+        Self {
             a: vec![0.0; n],
             b: 0.0,
             c: 0.0,
             asum: 0.0,
-            violation: f64::INFINITY,
             value: 0.0,
             ka: vec![0.0; n],
             g: vec![0.0; n],
-            code: StatusCode::Initialized,
-            steps: 0,
-            time: 0.0,
+            opt_status: OptimizationStatus::new(),
         }
     }
 

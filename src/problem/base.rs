@@ -38,7 +38,7 @@ pub trait ProblemBase {
 
     /// Checks for optimality.
     fn is_optimal(&self, status: &Status, tol: f64) -> bool {
-        self.lambda() * status.violation < tol
+        self.lambda() * status.opt_status.violation < tol
     }
 
     /// Recomputes the product of kernel matrix and coefficient vector.

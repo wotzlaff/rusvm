@@ -52,7 +52,7 @@ fn compute_decisions(problem: &dyn PrimalProblem, status_ext: &mut StatusExtende
     if problem.has_max_asum() {
         violation += (sums.sa - problem.max_asum()).abs();
     }
-    status_ext.status.violation = violation;
+    status_ext.status.opt_status.violation = violation;
     status_ext.status.asum = sums.sa;
     status_ext.active = active;
     status_ext.sums = sums;
@@ -165,31 +165,31 @@ pub fn solve_with_status(
     status_ext.status.value = obj_primal;
     loop {
         // update steps and time
-        status_ext.status.steps = step;
+        status_ext.status.opt_status.steps = step;
         let elapsed = start.elapsed().as_secs_f64();
-        status_ext.status.time = elapsed;
+        status_ext.status.opt_status.time = elapsed;
 
         if final_step {
-            status_ext.status.code = StatusCode::Optimal;
+            status_ext.status.opt_status.code = StatusCode::Optimal;
             stop = true;
         }
 
         // handle step limit
         if !stop && step >= params.max_steps {
-            status_ext.status.code = StatusCode::MaxSteps;
+            status_ext.status.opt_status.code = StatusCode::MaxSteps;
             stop = true;
         }
 
         // handle time limit
         if !stop && params.time_limit > 0.0 && elapsed >= params.time_limit {
-            status_ext.status.code = StatusCode::TimeLimit;
+            status_ext.status.opt_status.code = StatusCode::TimeLimit;
             stop = true;
         }
 
         // handle callback
         if let Some(callback_fn) = callback {
             if !stop && callback_fn(&status_ext.status) {
-                status_ext.status.code = StatusCode::Callback;
+                status_ext.status.opt_status.code = StatusCode::Callback;
                 stop = true;
             }
         };
@@ -221,7 +221,7 @@ pub fn solve_with_status(
 
         // update time
         let elapsed = start.elapsed().as_secs_f64();
-        status_ext.status.time = elapsed;
+        status_ext.status.opt_status.time = elapsed;
 
         // handle progress output
         if params.verbose > 0 && stop {
@@ -232,7 +232,7 @@ pub fn solve_with_status(
                 "",
                 "",
                 "",
-                status_ext.status.violation,
+                status_ext.status.opt_status.violation,
                 status_ext.status.value,
                 status_ext.status.asum,
             )
@@ -255,7 +255,7 @@ pub fn solve_with_status(
         } else {
             if desc.powi(2) < params.tol {
                 if fresh_ka {
-                    status_ext.status.code = StatusCode::Optimal;
+                    status_ext.status.opt_status.code = StatusCode::Optimal;
                     stop = true;
                 }
                 recompute_ka = true;
@@ -267,7 +267,7 @@ pub fn solve_with_status(
             let (_direction_type, desc, _backstep) =
                 descent_step(problem, kernel, params, &mut status_ext, true);
             if desc.powi(2) < params.tol {
-                status_ext.status.code = StatusCode::NoStepPossible;
+                status_ext.status.opt_status.code = StatusCode::NoStepPossible;
                 stop = true;
             }
         }
@@ -286,7 +286,7 @@ pub fn solve_with_status(
                 backstep,
                 status_ext.active.size_positive,
                 status_ext.active.all().len(),
-                status_ext.status.violation,
+                status_ext.status.opt_status.violation,
                 desc,
                 status_ext.status.value,
                 status_ext.status.asum,
@@ -296,7 +296,7 @@ pub fn solve_with_status(
 
         // terminate
         if final_step {
-            status_ext.status.code = StatusCode::Optimal;
+            status_ext.status.opt_status.code = StatusCode::Optimal;
             stop = true;
         }
         if stop {

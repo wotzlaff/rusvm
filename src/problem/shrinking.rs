@@ -29,7 +29,7 @@ pub trait ShrinkingBase: ProblemBase {
             .filter(|&k| {
                 let gkb = status.g[k] + status.b + status.c * self.sign(k);
                 let gkb_sqr = gkb * gkb;
-                gkb_sqr <= threshold * status.violation
+                gkb_sqr <= threshold * status.opt_status.violation
                     || !(status.a[k] == self.ub(k) && gkb < 0.0
                         || status.a[k] == self.lb(k) && gkb > 0.0)
             })
