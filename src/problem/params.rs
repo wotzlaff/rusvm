@@ -1,4 +1,5 @@
 /// Common parameters of a training problem
+#[derive(Debug)]
 pub struct Params {
     /// Extent of smoothing of the use max function
     pub smoothing: f64,
