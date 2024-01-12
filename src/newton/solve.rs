@@ -1,4 +1,4 @@
-use std::time::Instant;
+use crate::time::{now, until_now};
 
 use super::params::Params;
 use super::status_extended::{ActiveSet, Direction, StatusExtended, Sums};
@@ -144,7 +144,7 @@ pub fn solve_with_status(
     params: &Params,
     callback: Option<&dyn Fn(&Status) -> bool>,
 ) -> Status {
-    let start = Instant::now();
+    let start = now();
     let n = problem.size();
     let mut step: usize = 0;
     let mut stop = false;
@@ -166,7 +166,7 @@ pub fn solve_with_status(
     loop {
         // update steps and time
         status_ext.status.opt_status.steps = step;
-        let elapsed = start.elapsed().as_secs_f64();
+        let elapsed = until_now(start);
         status_ext.status.opt_status.time = elapsed;
 
         if final_step {
@@ -220,7 +220,7 @@ pub fn solve_with_status(
         }
 
         // update time
-        let elapsed = start.elapsed().as_secs_f64();
+        let elapsed = until_now(start);
         status_ext.status.opt_status.time = elapsed;
 
         // handle progress output
