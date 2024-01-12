@@ -15,3 +15,4 @@ pub use crate::predict::predict;
 
 mod status;
 pub use crate::status::{Status, StatusCode};
+mod time;
