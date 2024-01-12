@@ -1,5 +1,6 @@
-use super::status_extended::StatusExtended;
+use super::{gradient, DirectionType};
 use crate::kernel::Kernel;
+use crate::newton::status_extended::StatusExtended;
 use crate::problem::PrimalProblem;
 use ndarray::prelude::*;
 use ndarray_linalg::{FactorizeInto, Solve};
@@ -43,7 +44,7 @@ pub fn newton_with_fallback(
         gradient(problem, kernel, status_ext);
         return DirectionType::Gradient;
     }
-    let mut signs = Vector::zeros(n_active);
+    let mut signs = Array::zeros((n_active,));
     if problem.has_max_asum() {
         let mut sign_pos = false;
         let mut sign_neg = false;

@@ -1,34 +1,12 @@
-use super::status_extended::StatusExtended;
+use super::{gradient, DirectionType};
 use crate::kernel::Kernel;
+use crate::newton::status_extended::StatusExtended;
 use crate::problem::PrimalProblem;
-use ndarray::prelude::*;
 
-#[cfg(feature = "lapack")]
-use ndarray_linalg::{FactorizeInto, Solve};
-
-#[cfg(not(feature = "lapack"))]
 use rulinalg::matrix::decomposition::PartialPivLu;
 use rulinalg::matrix::Matrix;
 use rulinalg::vector::Vector;
 
-pub enum DirectionType {
-    Gradient,
-    Newton,
-    NoStep,
-}
-
-pub fn gradient(
-    problem: &dyn PrimalProblem,
-    _kernel: &mut dyn Kernel,
-    status_ext: &mut StatusExtended,
-) {
-    for i in 0..problem.size() {
-        status_ext.dir.a[i] = status_ext.status.a[i] + status_ext.status.g[i];
-    }
-    status_ext.dir.b = status_ext.sums.g / problem.lambda();
-}
-
-#[cfg(not(feature = "lapack"))]
 fn compute_matrix_and_rhs(
     problem: &dyn PrimalProblem,
     kernel: &mut dyn Kernel,
