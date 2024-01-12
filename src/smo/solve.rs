@@ -1,8 +1,16 @@
 use crate::kernel::Kernel;
 use crate::problem::DualProblem;
 use crate::status::{Status, StatusCode};
-#[cfg(not(feature = "no_time"))]
+#[cfg(not(feature = "wasm-time"))]
 use std::time::Instant;
+#[cfg(feature = "wasm-time")]
+fn now() -> f64 {
+    web_sys::window()
+        .expect("should have a Window")
+        .performance()
+        .expect("should have a Performance")
+        .now()
+}
 
 use super::update::update;
 use super::ws::*;
@@ -33,8 +41,10 @@ pub fn solve_with_status(
 ) -> Status {
     let mut status = status;
 
-    #[cfg(not(feature = "no_time"))]
+    #[cfg(not(feature = "wasm-time"))]
     let start = Instant::now();
+    #[cfg(feature = "wasm-time")]
+    let start = now();
 
     let n = problem.size();
     let mut active_set = (0..n).collect();
@@ -60,10 +70,10 @@ pub fn solve_with_status(
     loop {
         // update steps and time
         status.opt_status.steps = step;
-        #[cfg(not(feature = "no_time"))]
+        #[cfg(not(feature = "wasm-time"))]
         let elapsed = start.elapsed().as_secs_f64();
-        #[cfg(feature = "no_time")]
-        let elapsed = 0.0;
+        #[cfg(feature = "wasm-time")]
+        let elapsed = (now() - start) / 1000.0;
 
         status.opt_status.time = elapsed;
 
