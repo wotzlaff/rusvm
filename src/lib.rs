@@ -2,6 +2,10 @@
 #![feature(trait_upcasting)]
 #![warn(missing_docs)]
 
+#[cfg(feature = "wasm")]
+#[macro_use]
+mod console;
+
 pub mod kernel;
 mod max;
 pub mod newton;

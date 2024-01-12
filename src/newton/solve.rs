@@ -235,7 +235,7 @@ pub fn solve_with_status(
                 status_ext.status.opt_status.violation,
                 status_ext.status.value,
                 status_ext.status.asum,
-            )
+            );
         }
 
         // terminate
@@ -290,7 +290,7 @@ pub fn solve_with_status(
                 desc,
                 status_ext.status.value,
                 status_ext.status.asum,
-            )
+            );
         }
         step += 1;
 
@@ -303,5 +303,5 @@ pub fn solve_with_status(
             break;
         }
     }
-    status
+    status_ext.status
 }

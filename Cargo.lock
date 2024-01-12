@@ -863,6 +863,7 @@ dependencies = [
  "ndarray-linalg",
  "rulinalg",
  "serde",
+ "wasm-bindgen",
  "web-sys",
 ]
 
