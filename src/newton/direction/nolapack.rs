@@ -87,14 +87,14 @@ pub fn newton_with_fallback(
         let dc = (q00 * p1 - q01 * p0) / det;
         status_ext.dir.c = dc;
         for i in 0..n_active {
-            da_nonzero[i] = mat_inv_rhs[i] - db * mat_inv_one[i] - dc * mat_inv_signs[i];
+            da_nonzero.push(mat_inv_rhs[i] - db * mat_inv_one[i] - dc * mat_inv_signs[i]);
         }
     } else {
         // solve system with one additional constraints
         let db = (mat_inv_rhs.sum() - rhs_b) / mat_inv_one.sum();
         status_ext.dir.b = db;
         for i in 0..n_active {
-            da_nonzero[i] = mat_inv_rhs[i] - db * mat_inv_one[i];
+            da_nonzero.push(mat_inv_rhs[i] - db * mat_inv_one[i]);
         }
     };
     for (idx_i, &i) in status_ext.active.positives().iter().enumerate() {
