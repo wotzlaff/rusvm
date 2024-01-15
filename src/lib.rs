@@ -15,6 +15,8 @@ pub mod smo;
 pub mod smonewt;
 pub use crate::predict::predict;
 
+pub mod sensitivity;
+
 mod status;
 pub use crate::status::{Status, StatusCode};
 mod time;
