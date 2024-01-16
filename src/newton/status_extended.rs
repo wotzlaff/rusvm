@@ -35,13 +35,18 @@ impl ActiveSet {
     }
 }
 
+/// Struct containing the elements (a, b, c)
 pub struct Direction {
+    /// Vector of coefficients
     pub a: Vec<f64>,
+    /// Bias value
     pub b: f64,
+    /// Shift value
     pub c: f64,
 }
 
 impl Direction {
+    /// Creates a new direction struct
     pub fn new(size: usize) -> Self {
         Self {
             a: vec![0.0; size],
