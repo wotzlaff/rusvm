@@ -1,22 +1,19 @@
 //! Helper functions to obtain sensitivity information about the solution
 use crate::kernel::Kernel;
-use crate::newton::StatusExtended;
+use crate::newton::{Direction, StatusExtended};
 use crate::problem::PrimalProblem;
 
 use rulinalg::matrix::decomposition::PartialPivLu;
 use rulinalg::matrix::Matrix;
 use rulinalg::vector::Vector;
 
-/// Extended vector (a, b, c)
-pub type EVec = (Vec<f64>, f64, f64);
-
 /// Solves the transposed linearized system
 pub fn solve_transposed_linearization(
     problem: &dyn PrimalProblem,
     kernel: &mut dyn Kernel,
     status_ext: &mut StatusExtended,
-    rhs: &EVec,
-) -> EVec {
+    rhs: &Direction,
+) -> Direction {
     status_ext.active.merge();
     let n_active = status_ext.active.size_positive;
     if n_active == 0 {
@@ -37,8 +34,8 @@ pub fn solve_transposed_linearization(
         }
     }
 
-    let rhs0 = Vector::from(rhs.0.clone());
-    let mut sol = (vec![0.0; problem.size()], 0.0, 0.0);
+    let rhs0 = Vector::from(rhs.a.clone());
+    let mut sol = Direction::new(problem.size());
     let full_set: Vec<_> = (0..problem.size()).collect();
     kernel.use_rows(status_ext.active.positives(), &full_set, &mut |kis| {
         let mut mat = Matrix::zeros(n_active, n_active);
@@ -66,28 +63,28 @@ pub fn solve_transposed_linearization(
             let q01 = mat_inv_signs.sum();
             let q11 = mat_inv_signs.dot(&signs);
             let det = q00 * q11 - q01 * q01;
-            let p0 = mat_inv_one.dot(&rhs0) - rhs.1;
-            let p1 = mat_inv_signs.dot(&rhs0) - rhs.2;
+            let p0 = mat_inv_one.dot(&rhs0) - rhs.b;
+            let p1 = mat_inv_signs.dot(&rhs0) - rhs.c;
             // extract solution for scalar variables
             let db = (q11 * p0 - q01 * p1) / det;
-            sol.1 = db;
+            sol.b = db;
             let dc = (q00 * p1 - q01 * p0) / det;
-            sol.2 = dc;
+            sol.c = dc;
             for &j in vanishing.iter() {
-                sol.0[j] = rhs0[j] - db - dc * problem.sign(j);
+                sol.a[j] = rhs0[j] - db - dc * problem.sign(j);
             }
         } else {
             // solve system with one additional constraints
-            let db = (mat_inv_rhs.sum() - rhs.1) / mat_inv_one.sum();
-            sol.1 = db;
+            let db = (mat_inv_rhs.sum() - rhs.b) / mat_inv_one.sum();
+            sol.b = db;
             for &j in vanishing.iter() {
-                sol.0[j] = rhs.0[j] - db;
+                sol.a[j] = rhs.a[j] - db;
             }
         };
         for (idx_i, &i) in status_ext.active.positives().iter().enumerate() {
-            sol.0[i] = mat_inv_rhs[idx_i] / status_ext.h[i];
+            sol.a[i] = mat_inv_rhs[idx_i] / status_ext.h[i];
             for &j in vanishing.iter() {
-                sol.0[j] -= kis[idx_i][j] / problem.lambda() * mat_inv_rhs[idx_i];
+                sol.a[j] -= kis[idx_i][j] / problem.lambda() * mat_inv_rhs[idx_i];
             }
         }
     });
