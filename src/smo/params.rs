@@ -1,4 +1,6 @@
-#[derive(Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 /// Parameters of the SMO method
 pub struct Params {
     /// Termination tolerance

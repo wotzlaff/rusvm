@@ -1,5 +1,6 @@
 //! Combination of SMO and Newton's method
 use crate::kernel::Kernel;
+use crate::newton::StatusExtended;
 use crate::problem::Problem;
 use crate::Status;
 
@@ -31,7 +32,7 @@ pub fn solve(
     params: &Params,
     callback_smo: Option<&dyn Fn(&Status) -> bool>,
     callback_newton: Option<&dyn Fn(&Status) -> bool>,
-) -> Status {
+) -> StatusExtended {
     let n = problem.size();
     let mut status = smo::solve(problem, kernel, &params.smo, callback_smo);
     let full_set = (0..n).collect();

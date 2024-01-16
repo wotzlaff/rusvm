@@ -13,7 +13,7 @@ pub fn solve(
     kernel: &mut dyn Kernel,
     params: &Params,
     callback: Option<&dyn Fn(&Status) -> bool>,
-) -> Status {
+) -> StatusExtended {
     let n = problem.size();
     let status = Status::new(n);
     solve_with_status(status, problem, kernel, params, callback)
@@ -143,7 +143,7 @@ pub fn solve_with_status(
     kernel: &mut dyn Kernel,
     params: &Params,
     callback: Option<&dyn Fn(&Status) -> bool>,
-) -> Status {
+) -> StatusExtended {
     let start = now();
     let n = problem.size();
     let mut step: usize = 0;
@@ -303,5 +303,5 @@ pub fn solve_with_status(
             break;
         }
     }
-    status_ext.status
+    status_ext
 }

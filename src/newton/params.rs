@@ -1,5 +1,7 @@
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 /// Parameters of Newton's method
-#[derive(Debug)]
 pub struct Params {
     /// Termination tolerance
     pub tol: f64,
