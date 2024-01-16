@@ -46,35 +46,32 @@ pub trait Deriv {
     fn num_params(&self) -> usize;
 }
 
-/// Builds a RBF/Gaussian kernel matrix.
-pub fn gaussian<'a>(arr: &'a ArrayView2<'a, f64>, gamma: f64) -> impl Kernel + 'a {
+/// Computes simple Gaussian kernel function.
+pub fn gaussian_kernel(xi: &[f64], xj: &[f64], gamma: f64) -> f64 {
+    let dij = xi
+        .iter()
+        .zip(xj.iter())
+        .fold(0.0, |acc, (xik, xjk)| acc + (xik - xjk).powi(2));
+    (-gamma * dij).exp()
+}
+
+/// Builds a Gaussian kernel matrix.
+pub fn gaussian_from_array<'a>(arr: &'a ArrayView2<'a, f64>, gamma: f64) -> impl Kernel + 'a {
     let data = arr.outer_iter().collect();
     RowKernel::new(
         data,
         Box::new(move |&xi, &xj| {
-            let dij = xi
-                .iter()
-                .zip(xj.iter())
-                .fold(0.0, |acc, (xik, xjk)| acc + (xik - xjk).powi(2));
-            (-gamma * dij).exp()
+            gaussian_kernel(xi.as_slice().unwrap(), xj.as_slice().unwrap(), gamma)
         }),
         Box::new(move |&_xi| 1.0),
     )
 }
 
-/// Builds a RBF/Gaussian kernel matrix.
+/// Builds a Gaussian kernel matrix.
 pub fn gaussian_from_vecs<'a>(data: Vec<&'a [f64]>, gamma: f64) -> impl Kernel + 'a {
     RowKernel::new(
         data,
-        Box::new(move |xi: &&'a [f64], xj: &&'a [f64]| {
-            let dij = xi
-                .iter()
-                .zip(xj.iter())
-                .fold(0.0, |acc, (xik, xjk)| acc + (xik - xjk).powi(2));
-            (-gamma * dij).exp()
-        }),
+        Box::new(move |xi: &&'a [f64], xj: &&'a [f64]| gaussian_kernel(xi, xj, gamma)),
         Box::new(move |&_xi| 1.0),
     )
 }
-
-pub use gaussian as rbf;
