@@ -12,10 +12,14 @@ pub struct Params {
 }
 
 impl Params {
-    const DEFAULT_SMOOTHING: f64 = 0.0;
-    const DEFAULT_LAMBDA: f64 = 1.0;
-    const DEFAULT_MAX_ASUM: f64 = f64::INFINITY;
-    const DEFAULT_REGULARIZATION: f64 = 1e-12;
+    /// Default value of smoothing parameter
+    pub const DEFAULT_SMOOTHING: f64 = 0.0;
+    /// Default value of regularization parameter λ in the training problem
+    pub const DEFAULT_LAMBDA: f64 = 1.0;
+    /// Default value of maximum 1-norm of coefficient vector
+    pub const DEFAULT_MAX_ASUM: f64 = f64::INFINITY;
+    /// Default value of regularization parameter for descent estimation
+    pub const DEFAULT_REGULARIZATION: f64 = 1e-12;
 
     /// Creates a new [`Params`] struct with default parameters.
     pub fn new() -> Self {
