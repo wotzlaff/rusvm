@@ -1,7 +1,7 @@
 //! Kernels
 
 mod cached;
-pub use cached::CachedKernel;
+pub use cached::{cache, CachedKernel};
 mod precomputed;
 pub use precomputed::PrecomputedKernel;
 mod row;

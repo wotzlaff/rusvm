@@ -2,26 +2,29 @@ use super::Kernel;
 use caches::{Cache, RawLRU};
 
 /// A struct to cache rows of a kernel matrix.
-pub struct CachedKernel<'a, K>
-where
-    K: Kernel,
-{
+pub struct CachedKernel<'a> {
     cache: RawLRU<usize, usize>,
     data: Vec<Vec<f64>>,
-    base: &'a K,
+    base: Box<dyn Kernel + 'a>,
 }
 
-impl<K> CachedKernel<'_, K>
-where
-    K: Kernel,
-{
+impl<'a> CachedKernel<'a> {
     /// Generates a cached version of the given kernel matrix.
-    pub fn from(base: &K, capacity: usize) -> CachedKernel<'_, K> {
+    pub fn from(base: Box<dyn Kernel + 'a>, capacity: usize) -> CachedKernel<'a> {
         CachedKernel {
             cache: RawLRU::new(capacity).unwrap(),
             data: Vec::new(),
             base,
         }
+    }
+}
+
+/// Add cache to base kernel
+pub fn cache<'a>(base: Box<dyn Kernel + 'a>, cache_size: usize) -> Box<dyn Kernel + 'a> {
+    if cache_size > 0 {
+        Box::new(CachedKernel::from(base, cache_size))
+    } else {
+        base
     }
 }
 
@@ -43,10 +46,7 @@ where
     res
 }
 
-impl<K> super::Kernel for CachedKernel<'_, K>
-where
-    K: Kernel,
-{
+impl<'a> super::Kernel for CachedKernel<'a> {
     fn compute_row(&self, i: usize, ki: &mut [f64], active_set: &[usize]) {
         self.base.compute_row(i, ki, active_set);
     }
