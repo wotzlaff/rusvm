@@ -73,11 +73,18 @@ impl Sums {
     }
 }
 
+/// Status with additions (mainly second-order) information
 pub struct StatusExtended {
+    /// Underlying base status
     pub status: Status,
+    /// Current direction type
     pub dir: Direction,
+    /// Active set (containing nonzero 2nd loss derivatives and nonzero updates)
     pub active: ActiveSet,
+    /// Some terms needed in Newton's method
     pub sums: Sums,
+    /// Value of second loss derivative
     pub h: Vec<f64>,
+    /// Place to store the current kernel matrix row
     pub ki: Vec<f64>,
 }

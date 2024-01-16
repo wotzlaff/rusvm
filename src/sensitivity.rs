@@ -1,3 +1,4 @@
+//! Helper functions to obtain sensitivity information about the solution
 use crate::kernel::Kernel;
 use crate::newton::StatusExtended;
 use crate::problem::PrimalProblem;
@@ -6,8 +7,10 @@ use rulinalg::matrix::decomposition::PartialPivLu;
 use rulinalg::matrix::Matrix;
 use rulinalg::vector::Vector;
 
+/// Extended vector (a, b, c)
 pub type EVec = (Vec<f64>, f64, f64);
 
+/// Solves the transposed linearized system
 pub fn solve_transposed_linearization(
     problem: &dyn PrimalProblem,
     kernel: &mut dyn Kernel,
