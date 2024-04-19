@@ -1,5 +1,6 @@
 //! Solve SVM training problems.
 #![warn(missing_docs)]
+#![feature(trait_upcasting)]
 
 #[cfg(feature = "wasm")]
 #[macro_use]
